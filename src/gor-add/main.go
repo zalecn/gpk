@@ -17,15 +17,13 @@ func main() {
 		return
 	}
 
-	fmt.Println("Reading local information")
 	p,_ := gor.ReadProject() // read or create
 	
 	for _, v :=range flag.Args() {
-		fmt.Printf("arg%v\n", v)
 		p.AppendDependency(  gor.ParseProjectReference(v) )
 	}
-	
 	gor.WriteProject(p)
+	fmt.Printf("Status %v\n", p )
 	
 	
 	

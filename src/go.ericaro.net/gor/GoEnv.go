@@ -30,12 +30,25 @@ func (g *GoEnv) Install(root string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir  = root // asbolute path of the project
-	
-	fmt.Printf("%v > %v %v  where %v\n", cmd.Dir, cmd.Path, cmd.Args, cmd.Env)
-	
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("%v\n", err)
 	}
-
 } 
+
+// plan :
+// server for .gors database with .gor table ( g, a , b, v, blob= tar.gz )
+// deploy/download from server.
+// script (on the server) that scans for godocs for instance ) to auto upload 1.0 of every product
+// offer snapshot server instances, search the code (google code search), browse the doc
+
+// tasks
+// implement a download cmd ( http tar.gz -> install dir header contains the metadata ? right ?)
+// implement an upload cmd ( reverse protocol )
+// start  a server in go and google app engine, empty engine
+// implements a server, and receive http -> blob
+// implements a server simple front end for artifacts  (name/ link to their source)
+// 
+
+ 
+
 

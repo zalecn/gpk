@@ -114,7 +114,7 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
-	CopyDir(dst, filepath.Join(p.Root, "src") )
+	CopyDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src") )
 
 	WriteProjectFile(filepath.Join(dst, GorFile), p)
 
@@ -130,18 +130,20 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 
 func CopyDir(dst, src string) {
 	log.Printf("Copying Dir %v -> %v\n", src, dst)
-	file, err := os.Open(src)
-	if os.IsNotExist(err) {
-		os.MkdirAll(dst, os.ModeDir)
-	}
+	file, _ := os.Open(src)
+	os.MkdirAll(dst, os.ModeDir|os.ModePerm)
+	
 	subdir, _ := file.Readdir(-1)
 	for _, fi := range subdir {
 		ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
 		if fi.IsDir() {
 			CopyDir(ndst, nsrc)
 		} else {
-			log.Printf("copy %v -> %v", ndst, nsrc)
-			CopyFile(ndst, nsrc)
+			log.Printf("copy %v -> %v",  nsrc, ndst)
+			_, err := CopyFile(ndst, nsrc)
+			if err != nil {
+				log.Printf("failed to copy %v \n", err)
+			}
 		}
 	}
 }

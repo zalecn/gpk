@@ -10,7 +10,7 @@ import (
 
 // The flag package provides a default help printer via -h switch
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
-var releaseFlag *bool = flag.Bool("r", true, "Build using only release dependencies.")
+var releaseFlag *bool = flag.Bool("r", false, "Build using only release dependencies.")
 
 func main() {
 	flag.Parse() // Scan the arguments list 
