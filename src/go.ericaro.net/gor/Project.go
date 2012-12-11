@@ -3,8 +3,11 @@ package gor
 import (
 	"fmt"
 	"os"
+	"io"
 	"path"
 	"path/filepath"
+	"archive/tar"
+	"bytes"
 )
 
 /*
@@ -49,19 +52,45 @@ func ReadProjectFile(gorpath string) (p *Project, err error) {
 func WriteProject(p *Project) error {
 	return WriteProjectFile(GorFile, p)
 }
-func WriteProjectFile(file string, p *Project) error {
+func WriteProjectFile(file string, p *Project) (err error) {
 	f, err := os.Create(file)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	err = Encode(p, f)
+	err = EncodeProject(p, f)
 	return err
 }
+func EncodeProject(p *Project, w io.Writer) (err error) {
+	err = Encode(p, w)
+	return
+}
+
+
 
 func (p *Project) AppendDependency(ref ...ProjectReference) {
 	p.Dependencies = append(p.Dependencies, ref...)
 }
+
+
+//PackageProject into a tar writer
+func (p *Project) PackageProject(tw *tar.Writer) {
+		//prepare recursive handlers
+	dirHandler := func(ldst, lsrc string)(err error){
+		return
+	}
+	fileHandler := func(ldst, lsrc string) (err error) {
+		err = TarFile(ldst, lsrc, tw)
+		return
+	}
+	walkDir("/", filepath.Join(p.Root, "src") , dirHandler, fileHandler)
+	
+	buf := new(bytes.Buffer)
+	EncodeProject(p, buf)
+	TarBuff(filepath.Join("/", GorFile), buf, tw)
+}
+
+
 
 
 

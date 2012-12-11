@@ -1,11 +1,11 @@
 package gor
 
 import (
-	"io"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	
 )
 
 const (
@@ -114,10 +114,19 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
-	CopyDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src") )
-
+	
+	//prepare recursive handlers
+	dirHandler := func(ldst, lsrc string)(err error){
+		err = os.MkdirAll(ldst, os.ModeDir|os.ModePerm) // mkdir -p
+		return
+	}
+	fileHandler := func(ldst, lsrc string) (err error) {
+		_, err = CopyFile(ldst, lsrc)
+		return
+	}
+	
+	walkDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src") , dirHandler, fileHandler)
 	WriteProjectFile(filepath.Join(dst, GorFile), p)
-
 
 	if !snapshotMode { // if in release, then remove all the snapshots 
 		altDir := filepath.Join(r.Root, Snapshot, prjPath)
@@ -125,39 +134,5 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 			os.RemoveAll(altDir)
 		}
 	}
-
 }
 
-func CopyDir(dst, src string) {
-	log.Printf("Copying Dir %v -> %v\n", src, dst)
-	file, _ := os.Open(src)
-	os.MkdirAll(dst, os.ModeDir|os.ModePerm)
-	
-	subdir, _ := file.Readdir(-1)
-	for _, fi := range subdir {
-		ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
-		if fi.IsDir() {
-			CopyDir(ndst, nsrc)
-		} else {
-			log.Printf("copy %v -> %v",  nsrc, ndst)
-			_, err := CopyFile(ndst, nsrc)
-			if err != nil {
-				log.Printf("failed to copy %v \n", err)
-			}
-		}
-	}
-}
-
-func CopyFile(dst, src string) (int64, error) {
-	sf, err := os.Open(src)
-	if err != nil {
-		return 0, err
-	}
-	defer sf.Close()
-	df, err := os.Create(dst)
-	if err != nil {
-		return 0, err
-	}
-	defer df.Close()
-	return io.Copy(df, sf)
-}
