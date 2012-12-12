@@ -21,6 +21,13 @@ func ParseProjectReference(value string) ProjectReference {
 	return p
 }
 
+func NewProjectReference(group, artifact string, version VersionReference) ProjectReference {
+	return ProjectReference{
+	Group: group,
+	Artifact: artifact,
+	Version: version,
+	}
+}
 
 //Path converts this project reference into the path it should have in the repository layout
 func (d ProjectReference) Path() string {
