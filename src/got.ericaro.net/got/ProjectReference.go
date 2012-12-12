@@ -35,5 +35,5 @@ func (d ProjectReference) Path() string {
 }
 
 func (d ProjectReference) String() string {
-	return fmt.Sprintf("%v:%v:%v", d.Artifact, d.Group, d.Version)
+	return fmt.Sprintf("%v:%v:%v", d.Group, d.Artifact,  d.Version)
 }

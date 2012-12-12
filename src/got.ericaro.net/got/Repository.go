@@ -1,11 +1,12 @@
 package got
 
 import (
-	"log"
+	"errors"
+	"fmt"
 	"os"
 	"os/user"
+	"strings"
 	"path/filepath"
-	
 )
 
 const (
@@ -45,35 +46,43 @@ func exists(path string) bool {
 	return true
 }
 
-func (r *Repository) findProject(mode string, p ProjectReference) (prj *Project) {
+func (r *Repository) findProject(mode string, p ProjectReference, offline, update bool) (prj *Project, err error) {
+	// TODO hande offline and update here
 	relative := p.Path()
 	abs := filepath.Join(r.Root, mode, relative, GorFile)
-	log.Printf("Looking for %v into %v", p, abs)
+	//log.Printf("Looking for %v into %v", p, abs)
 	if exists(abs) {
-		prj, _ = ReadProjectFile(abs)
+		prj, err = ReadProjectFile(abs)
+	} else {
+		err =  errors.New(fmt.Sprintf("Missing dependency %v",p ))
 	}
-	return prj // nil possible
+	return // nil possible
 }
 
 //FindProject lookup for the project reference in the local repository
 // if the repository is in snapshot mode it looks for a snapshot version first.
 // if it fails or if is not in snapshot mode it looks for a release version.
-func (r *Repository) FindProject(p ProjectReference, searchSnapshot bool) (prj *Project) {
-	if searchSnapshot {
-		prj = r.findProject(Snapshot, p)
+func (r *Repository) FindProject(p ProjectReference, searchSnapshot, offline, update bool) (prj *Project, err error) {
+	
+	prj, err = r.findProject(Release, p, offline, false)// never search updates on the release
+		
+	if searchSnapshot && err != nil {// search for snapshot if and only if needed
+		prj, err = r.findProject(Snapshot, p, offline, update)
 	}
 
 	if prj == nil {
-		prj = r.findProject(Release, p)
+		err =  errors.New(fmt.Sprintf("Missing dependency %v.\nCaused by:%v",p, err ))
 	}
 	return
 }
 
 //FindProjectDependencies lookup recursively for all project dependencies
-func (r *Repository) FindProjectDependencies(p *Project, searchSnapshot bool) (dependencies []*Project) {
+func (r *Repository) FindProjectDependencies(p *Project, searchSnapshot, offline, update bool) (dependencies []*Project, err error) {
 	depMap := make(map[ProjectReference]*Project)
-	r.findProjectDependencies(p, depMap, searchSnapshot)
-
+	err = r.findProjectDependencies(p, depMap, searchSnapshot, offline, update)
+	if err != nil {
+		return
+	}
 	dependencies = make([]*Project, 0, len(depMap))
 	for _, v := range depMap {
 		dependencies = append(dependencies, v)
@@ -82,17 +91,22 @@ func (r *Repository) FindProjectDependencies(p *Project, searchSnapshot bool) (d
 }
 
 //findProjectDependencies private recursive version
-func (r *Repository) findProjectDependencies(p *Project, dependencies map[ProjectReference]*Project, searchSnapshot bool) {
+func (r *Repository) findProjectDependencies(p *Project, dependencies map[ProjectReference]*Project, searchSnapshot, offline, update bool) (err error) {
 	for _, d := range p.Dependencies {
-		if dependencies[d] == nil { // new dependencies
-			prj := r.FindProject(d, searchSnapshot)
-			if prj == nil {
-				log.Fatalf("missing dependency %v \n", d)
+		if dependencies[d] == nil { // it's a new dependencies
+			prj, err := r.FindProject(d, searchSnapshot, offline, update)
+			if err != nil {
+				// missing dependency
+				return err
 			}
 			dependencies[d] = prj
-			r.findProjectDependencies(prj, dependencies, searchSnapshot)
+			err = r.findProjectDependencies(prj, dependencies, searchSnapshot, offline, update)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return
 }
 
 //InstallProject install the project into this repository
@@ -114,9 +128,9 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
-	
+
 	//prepare recursive handlers
-	dirHandler := func(ldst, lsrc string)(err error){
+	dirHandler := func(ldst, lsrc string) (err error) {
 		err = os.MkdirAll(ldst, os.ModeDir|os.ModePerm) // mkdir -p
 		return
 	}
@@ -124,8 +138,8 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 		_, err = CopyFile(ldst, lsrc)
 		return
 	}
-	
-	walkDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src") , dirHandler, fileHandler)
+
+	walkDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src"), dirHandler, fileHandler)
 	WriteProjectFile(filepath.Join(dst, GorFile), p)
 
 	if !snapshotMode { // if in release, then remove all the snapshots 
@@ -136,3 +150,11 @@ func (r *Repository) InstallProject(p *Project, v Version, snapshotMode bool) {
 	}
 }
 
+func (r *Repository) GoPath(dependencies []*Project) (gopath string, err error) {
+	sources := make([]string, 0, len(dependencies))
+	for _, pr := range dependencies {
+		sources = append(sources, pr.Root)
+	}
+	gopath = strings.Join(sources, string(os.PathListSeparator))
+	return
+}
