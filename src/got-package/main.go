@@ -13,7 +13,7 @@ func main() {
 	flag.Parse() // Scan the arguments list 
 
 	if *versionFlag {
-		fmt.Println("Version:", got.GOR_VERSION)
+		fmt.Println("Version:", got.GotVersion)
 		return
 	}
 

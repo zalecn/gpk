@@ -97,10 +97,7 @@ func (p *Project) PackageProject(tw *tar.Writer) {
 func (p *Project) String() string {
 	dependencies := ""
 	for _,dep := range p.Dependencies {
-		dependencies+=fmt.Sprintf("                        %v\n", dep)
+		dependencies+=fmt.Sprintf("\n  -> %v", dep)
 	}
-	return fmt.Sprintf(`
-Project             : %v:%v
-        Dependencies:
-%v`, p.Group, p.Artifact, dependencies)
+	return fmt.Sprintf("%v:%v%v\n", p.Group, p.Artifact, dependencies)
 }
