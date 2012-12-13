@@ -25,6 +25,11 @@ func ParseVersionReference(version string) VersionReference {
 	return v
 }
 
+func (vref *VersionReference) Version() (v *Version) {
+	ve:= ParseVersion(vref.String())
+	return &ve
+}
+
 func (v VersionReference) Path() string {
 	return filepath.Join(v.Root, v.Parts)
 }

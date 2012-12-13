@@ -22,7 +22,7 @@ func main() {
 	}
 
 	log.Printf("running got download \n")
-	p := got.ParseProjectReference(flag.Arg(0))
+	p, _ := got.ParseProjectReference(flag.Arg(0))
 
 	v := url.Values{}
 	v.Set("g", p.Group)
@@ -32,7 +32,7 @@ func main() {
 	u := url.URL{
 		//scheme://[userinfo@]host/path[?query][#fragment]
 		Scheme:   "http",
-		Host:     got.GorCentral,
+		Host:     got.GotCentral,
 		Path:     "/p/dl",
 		RawQuery: v.Encode(),
 	}

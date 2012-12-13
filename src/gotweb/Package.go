@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 //a Package is a pure, in-memory representation of a Package
@@ -15,6 +16,7 @@ type Package struct {
 	Group, Artifact, Root, Version string
 	ContentBlob                    appengine.BlobKey // tar.gz of the content
 	Release                        bool              // whether its a release or not
+	Timestamp                      time.Time         // version timestamp
 }
 
 type PackageServer struct {
@@ -77,6 +79,7 @@ func receive(w http.ResponseWriter, r *http.Request) {
 	artifact := vals.Get("a") // todo validate the syntax
 	version := got.ParseVersionReference(vals.Get("v"))
 	release, _ := strconv.ParseBool(vals.Get("r"))
+	timestamp, _ := time.Parse(time.ANSIC, vals.Get("t"))
 
 	s.Debugf("upload release=%t %v:%v:%v \n", release, group, artifact, version)
 
@@ -95,15 +98,17 @@ func receive(w http.ResponseWriter, r *http.Request) {
 	blob, err := s.CreateBlob(r.Body) // create and fill the blob
 	if p == nil {
 		p = &Package{
-			Group:    group,
-			Artifact: artifact,
-			Root:     version.Root,
-			Version:  version.Parts,
-			Release:  release,
+			Group:     group,
+			Artifact:  artifact,
+			Root:      version.Root,
+			Version:   version.Parts,
+			Release:   release,
+			Timestamp: timestamp,
 		}
 	} else {
 		// delete the previous blob
-		p.Release= release
+		p.Release = release
+		p.Timestamp = timestamp
 		s.DeleteBlob(p.ContentBlob)
 	}
 	// update the new blob
@@ -116,11 +121,38 @@ func receive(w http.ResponseWriter, r *http.Request) {
 	s.Debugf("stored %v\n", pr)
 }
 
+// return a 404 if there is no newer version
+func newer(w http.ResponseWriter, r *http.Request) {
+	s := New(r)
+	group := r.FormValue("g")
+	artifact := r.FormValue("a")
+	version := got.ParseVersionReference(r.FormValue("v"))
+	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
+
+	if group == "" || artifact == "" {
+		http.NotFound(w, r)
+		return
+	}
+	pr := got.NewProjectReference(group, artifact, version)
+	p, err := s.Get(pr)
+	if p == nil || err == datastore.ErrNoSuchEntity {
+		http.NotFound(w, r)
+		return
+	}
+	if !p.Timestamp.After(timestamp) { // 
+		http.NotFound(w, r)
+		return
+	}
+	return
+}
+
 func serve(w http.ResponseWriter, r *http.Request) {
 	s := New(r)
 	group := r.FormValue("g")
 	artifact := r.FormValue("a")
 	version := got.ParseVersionReference(r.FormValue("v"))
+	release, _ := strconv.ParseBool(r.FormValue("r"))
+	
 	if group == "" || artifact == "" {
 		http.NotFound(w, r)
 		return
@@ -132,7 +164,10 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.Debugf("serving %#v\n", p)
+	if !p.Release && release{
+		http.NotFound(w, r)
+		return
+	}
 	blobstore.Send(w, p.ContentBlob)
 	return
 }
@@ -142,4 +177,5 @@ type handlerFunc func(http.ResponseWriter, *http.Request) error
 func init() {
 	http.HandleFunc("/p/dl", serve)
 	http.HandleFunc("/p/ul", receive)
+	http.HandleFunc("/p/nl", newer)
 }

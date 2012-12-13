@@ -4,6 +4,7 @@ import (
 	"strings"
 	"path/filepath"
 	"fmt"
+	"errors"
 )
 
 // ProjectReference is just a way to keep references to another project
@@ -12,16 +13,52 @@ type ProjectReference struct {
 	Version         VersionReference
 }
 
-func ParseProjectReference(value string) ProjectReference {
-	p := ProjectReference{}
+func ParseProjectReference(value string) (p ProjectReference, err error) {
+	p = ProjectReference{}
 	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		errors.New("Invalid Project Reference Format") 
+	}
 	p.Group = parts[0]
 	p.Artifact = parts[1]
 	p.Version = ParseVersionReference(parts[2])
-	return p
+	return
 }
 
 func NewProjectReference(group, artifact string, version VersionReference) ProjectReference {
+	return ProjectReference{
+	Group: group,
+	Artifact: artifact,
+	Version: version,
+	}
+}
+
+func (p *ProjectReference) Project() (prj *Project) {
+	return &Project{
+	Group: p.Group,
+	Artifact: p.Artifact,
+	Version: p.Version.Version(),
+	}
+}
+
+func NewGoGetProjectReference(pack string, version VersionReference) ProjectReference {
+	parts := strings.SplitN(pack, "/", 2)
+	if len(parts) !=2 {
+		panic("Not a valid go get package "+pack)
+	}
+	lefties := strings.Split(parts[0], ".")
+	righties := strings.Split(parts[1], "/")
+	
+	//reverse lefties
+	for i,j:=0,len(lefties)-1; i< len(lefties)/2;i,j=i+1,j-1 {
+		lefties[i], lefties[j] = lefties[j], lefties[i]
+	}
+	names:=make([]string, 0, len(lefties)+ len(righties) )
+	names = append(names, lefties...) 
+	names = append(names, righties...) 
+	
+	group := strings.Join(names[:len(names)-1], ".")
+	artifact:= names[len(names)-1]
 	return ProjectReference{
 	Group: group,
 	Artifact: artifact,

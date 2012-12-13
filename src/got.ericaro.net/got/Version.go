@@ -45,11 +45,19 @@ func ParseVersion(version string) Version {
 	return *v
 }
 
+
+
 func atoi(s string) uint8{
 	i,_ := strconv.ParseUint(s, 10, 8)
 	return uint8(i)
 }
 
+func (v *Version) Reference() (vref VersionReference){
+	return VersionReference{
+		Root  : v.Root,
+		Parts : fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3]),
+	}
+}
 
 func (v *Version) String() string {
 	return fmt.Sprintf("%s-%d.%d.%d.%d", v.Root, v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3])
