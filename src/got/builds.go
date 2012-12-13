@@ -11,6 +11,7 @@ func init() {
 	Reg(
 		&Compile,
 		&Install,
+		&Deploy,
 		&Get,
 	)
 
@@ -32,6 +33,15 @@ var Install = Command{
 	Short:          `Install the current project in the local repository`,
 	Long:           `Install the current project in the local repository`,
 	call:           func(c *Command) { c.Install() },
+	RequireProject: true,
+}
+
+var Deploy = Command{
+	Name:           `deploy`,
+	UsageLine:      `<version>`,
+	Short:          `Deploy the current project in the remote repository`,
+	Long:           `Deploy the current project in the remote repository`,
+	call:           func(c *Command) { c.Deploy() },
 	RequireProject: true,
 }
 
@@ -88,6 +98,13 @@ func (c *Command) Install() {
 	c.Repository.InstallProject(c.Project, version ,!*installReleaseFlag)
 }
 
+var deployReleaseFlag *bool = Deploy.Flag.Bool("r", false, "Deploy as a Release in the Central Repository")
+
+func (c *Command) Deploy() {
+	version := got.ParseVersion(c.Flag.Arg(0) )
+	
+	c.Repository.DeployProject(c.Project, version ,!*deployReleaseFlag)
+}
 
 
 func (c *Command) Get() { 

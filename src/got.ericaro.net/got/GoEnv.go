@@ -26,9 +26,9 @@ func (g *GoEnv) BuildEnv(vals map[string]string) []string {
 		parts := strings.SplitN(v, "=", 2)
 		k := parts[0]
 		if val, ok := vals[k]; ok {
-			newenv = append(newenv, fmt.Sprintf("%s=%s", k, val) )
+			newenv = append(newenv, fmt.Sprintf("%s=%s", k, val))
 		} else {
-			newenv = append(newenv, fmt.Sprintf("%s=%s", k, parts[1]) )
+			newenv = append(newenv, fmt.Sprintf("%s=%s", k, parts[1]))
 		}
 	}
 	return newenv
@@ -71,7 +71,7 @@ func (g *GoEnv) Get(pack string) {
 		"GOPATH": g.gopath,
 	}
 	env := g.BuildEnv(locals)
-fmt.Println(env)
+	fmt.Println(env)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

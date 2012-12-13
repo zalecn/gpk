@@ -56,7 +56,7 @@ func exists(path string) bool {
 
 func (r *Repository) findLocalProject(mode string, p ProjectReference) (prj *Project, err error) {
 	// TODO hande offline and update here
-	
+
 	relative := p.Path()
 	abs := filepath.Join(r.Root, mode, relative, GotFile)
 	//log.Printf("Looking for %v into %v", p, abs)
@@ -103,7 +103,7 @@ func (r *Repository) FindProject(p ProjectReference, searchSnapshot, offline, up
 	if prj == nil {
 		err = errors.New(fmt.Sprintf("Missing dependency %v.\nCaused by:%v", p, err))
 	} else {
-	log.Printf(" found\n")
+		log.Printf(" found\n")
 	}
 	return
 }
@@ -230,7 +230,7 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 	v.Set("v", p.Version.String())
 	if !searchSnapshot {
 		v.Set("r", "true")
-	}else {
+	} else {
 		v.Set("r", "false")
 	}
 	//query url
@@ -241,7 +241,7 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 		Path:     "/p/dl",
 		RawQuery: v.Encode(),
 	}
-	log.Printf("get %v\n",u.String())
+	log.Printf("get %v\n", u.String())
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return
@@ -276,9 +276,9 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 
 }
 func (r *Repository) GoGetInstall(pack string) {
-	prj := NewGoGetProjectReference(pack, ParseVersionReference("bigbang-0.0.0.0") )
+	prj := NewGoGetProjectReference(pack, ParseVersionReference("bigbang-0.0.0.0"))
 	fmt.Printf("getting %v as %s \n", pack, prj)
-	dst := filepath.Join(r.Root, Snapshot, prj.Group, prj.Artifact, prj.Version.Path() )
+	dst := filepath.Join(r.Root, Snapshot, prj.Group, prj.Artifact, prj.Version.Path())
 	if exists(dst) {
 		os.RemoveAll(dst)
 	}
@@ -287,7 +287,7 @@ func (r *Repository) GoGetInstall(pack string) {
 	g.Get(pack)
 
 	// computes the absolute path
-		
+
 }
 
 //InstallProject install the project into this repository
@@ -334,6 +334,14 @@ func (r *Repository) InstallProject(prj *Project, v Version, snapshotMode bool) 
 			os.RemoveAll(altDir)
 		}
 	}
+}
+
+func (r *Repository) DeployProject(prj *Project, v Version, snapshotMode bool) {
+	p := *prj // copy the prj
+	p.Snapshot = &snapshotMode
+	p.Version = &v
+		
+	r.UploadProject(&p)
 }
 
 func (r *Repository) GoPath(dependencies []*Project) (gopath string, err error) {
