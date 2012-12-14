@@ -15,7 +15,6 @@ import (
 	"time"
 )
 
-
 //a Repository is a directory where dependencies are stored
 // they are splitted into releases, and snapshots
 type Repository struct {
@@ -335,7 +334,7 @@ func (r *Repository) DeployProject(prj *Project, v Version, snapshotMode bool) {
 	p := *prj // copy the prj
 	p.Snapshot = &snapshotMode
 	p.Version = &v
-		
+
 	r.UploadProject(&p)
 }
 

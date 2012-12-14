@@ -36,10 +36,11 @@ var Install = Command{
 	call:           func(c *Command) { c.Install() },
 	RequireProject: true,
 }
+
 // TODO move around the remote tool chain
 var Deploy = Command{
 	Name:           `deploy`,
-	Alias: `d`,
+	Alias:          `d`,
 	UsageLine:      `<version>`,
 	Short:          `Deploy the current project in the remote repository`,
 	Long:           `Deploy the current project in the remote repository`,
@@ -49,10 +50,10 @@ var Deploy = Command{
 
 var Get = Command{
 	Name:           `goget`,
-	Alias: `get`,
+	Alias:          `get`,
 	UsageLine:      `<goget package>`,
-	Short:          `go get a package and install it`,
-	Long:           `go get a package and install it`,
+	Short:          `Run go get a package and install it`,
+	Long:           `Run go get a package and install it`,
 	call:           func(c *Command) { c.Get() },
 	RequireProject: true,
 }

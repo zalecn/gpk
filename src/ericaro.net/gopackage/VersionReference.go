@@ -2,8 +2,8 @@ package gopackage
 
 import (
 	"fmt"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 type VersionReference struct {
@@ -26,7 +26,7 @@ func ParseVersionReference(version string) VersionReference {
 }
 
 func (vref *VersionReference) Version() (v *Version) {
-	ve:= ParseVersion(vref.String())
+	ve := ParseVersion(vref.String())
 	return &ve
 }
 

@@ -1,1 +1,1 @@
-{"Root":"/home/eric/Workspace/git_old/home/gor","Group":"got.ericaro.net","Artifact":"got","Dependencies":[]}
+{"Root":"/home/eric/Workspace/git_old/home/gor","Group":"net.ericaro","Artifact":"gopackage","Version":null,"Snapshot":null,"Dependencies":[{"Group":"com.google","Artifact":"appengine","Version":{"Root":"bigbang","Parts":"0.0.0.0"}}]}

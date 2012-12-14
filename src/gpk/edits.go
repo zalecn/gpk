@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"ericaro.net/gopackage"
+	"fmt"
 	"strings"
 )
 
@@ -18,7 +18,7 @@ func init() {
 
 var Status = Command{
 	Name:           `status`,
-	Alias:           `?`,
+	Alias:          `?`,
 	UsageLine:      ``,
 	Short:          `Prints current directory project status.`,
 	Long:           `Prints current directory status`,
@@ -27,8 +27,8 @@ var Status = Command{
 }
 
 var Add = Command{
-	Name:      `Add`,
-	Alias:      `+`,
+	Name:      `add`,
+	Alias:     `+`,
 	UsageLine: `<dependencies>...`,
 	Short:     `Add dependencies to this project.`,
 	Long: `Dependencies are formatted as follow
@@ -47,7 +47,7 @@ var Add = Command{
 }
 var Remove = Command{
 	Name:      `remove`,
-	Alias:      `-`,
+	Alias:     `-`,
 	UsageLine: `<dependencies>...`,
 	Short:     `Remove dependencies to this project.`,
 	Long: `Dependencies are formatted as follow
@@ -66,10 +66,10 @@ var Remove = Command{
 }
 
 var Init = Command{
-	Name:      `new`,
-	Alias:          `!`,
+	Name:      `init`,
+	Alias:     `!`,
 	UsageLine: `group:name`,
-	Short:     `init the current directory as a gopackage project.`,
+	Short:     `Init the current directory as a gopackage project.`,
 	Long: `where   :
 	group   : is a simple name ( usually DNS name that identify a group )
 	artifact: is a simple name (usually not hierarchical )`,

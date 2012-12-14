@@ -152,7 +152,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	artifact := r.FormValue("a")
 	version := gopackage.ParseVersionReference(r.FormValue("v"))
 	release, _ := strconv.ParseBool(r.FormValue("r"))
-	
+
 	if group == "" || artifact == "" {
 		http.NotFound(w, r)
 		return
@@ -164,7 +164,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if !p.Release && release{
+	if !p.Release && release {
 		http.NotFound(w, r)
 		return
 	}

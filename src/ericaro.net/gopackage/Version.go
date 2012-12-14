@@ -2,10 +2,10 @@ package gopackage
 
 import (
 	"fmt"
-	"time"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // versions are NOT linear ones. there are three kinds of versions:
@@ -30,32 +30,29 @@ func NewVersion() *Version {
 	}
 }
 
-
 func ParseVersion(version string) Version {
 	v := NewVersion()
 	parts := strings.Split(version, "-")
 	v.Root = parts[0]
 	if len(parts) == 2 {
-		sparts := strings.Split( parts[1] , "." )
-		v.Parts[0]= atoi(sparts[0])  
-		v.Parts[1]= atoi(sparts[1])  
-		v.Parts[2]= atoi(sparts[2])  
-		v.Parts[3]= atoi(sparts[3])  
+		sparts := strings.Split(parts[1], ".")
+		v.Parts[0] = atoi(sparts[0])
+		v.Parts[1] = atoi(sparts[1])
+		v.Parts[2] = atoi(sparts[2])
+		v.Parts[3] = atoi(sparts[3])
 	}
 	return *v
 }
 
-
-
-func atoi(s string) uint8{
-	i,_ := strconv.ParseUint(s, 10, 8)
+func atoi(s string) uint8 {
+	i, _ := strconv.ParseUint(s, 10, 8)
 	return uint8(i)
 }
 
-func (v *Version) Reference() (vref VersionReference){
+func (v *Version) Reference() (vref VersionReference) {
 	return VersionReference{
-		Root  : v.Root,
-		Parts : fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3]),
+		Root:  v.Root,
+		Parts: fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3]),
 	}
 }
 
@@ -64,5 +61,5 @@ func (v *Version) String() string {
 }
 
 func (v *Version) Path() string {
-	return filepath.Join(v.Root, fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3] ) )
+	return filepath.Join(v.Root, fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3]))
 }
