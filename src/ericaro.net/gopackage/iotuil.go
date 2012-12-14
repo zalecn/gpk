@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -59,7 +58,7 @@ func TarFile(dst, src string, tw *tar.Writer) (err error) {
 		return err
 	}
 	_, err = io.Copy(tw, sf)
-	log.Printf("%v %d\n", hdr.Name, hdr.Size)
+	//log.Printf("%v %d\n", hdr.Name, hdr.Size)
 	return
 }
 

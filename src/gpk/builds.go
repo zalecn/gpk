@@ -107,7 +107,10 @@ func (c *Command) Install() {
 var deployReleaseFlag *bool = Deploy.Flag.Bool("r", false, "Deploy as a Release in the Central Repository")
 
 func (c *Command) Deploy() {
+	
+	
 	version := gopackage.ParseVersion(c.Flag.Arg(0))
+	fmt.Printf("deploy %s %v to %s\n", c.Project.Name, version, c.Repository.ServerHost)
 
 	c.Repository.DeployProject(c.Project, version, !*deployReleaseFlag)
 }
