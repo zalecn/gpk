@@ -3,7 +3,6 @@ package main
 import (
 	"ericaro.net/gopackage"
 	"fmt"
-	"strings"
 )
 
 func init() {
@@ -87,17 +86,9 @@ func (c *Command) Init() {
 
 	p, err := gopackage.ReadProject()
 	if err == nil {
-		fmt.Printf("warning: init an existing project. This is fine if you want to edit it")
+		fmt.Printf("warning: init an existing project. This is fine if you want to edit it\n")
 	}
-
-	parts := strings.Split(c.Flag.Arg(0), ":")
-	if len(parts) != 2 {
-		fmt.Printf("Invalid Project Reference Format, must be group:name \n")
-		return
-	}
-	p.Group = parts[0]
-	p.Artifact = parts[1]
-
+	p.Name = c.Flag.Arg(0)
 	c.Project = p // in case 
 	gopackage.WriteProject(c.Project)
 

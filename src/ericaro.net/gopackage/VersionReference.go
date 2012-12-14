@@ -2,7 +2,6 @@ package gopackage
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 )
 
@@ -31,5 +30,5 @@ func (vref *VersionReference) Version() (v *Version) {
 }
 
 func (v VersionReference) Path() string {
-	return filepath.Join(v.Root, v.Parts)
+	return v.String()
 }

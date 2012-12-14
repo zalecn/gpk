@@ -25,12 +25,21 @@ func (g *GoEnv) BuildEnv(vals map[string]string) []string {
 	for _, v := range current {
 		parts := strings.SplitN(v, "=", 2)
 		k := parts[0]
-		if val, ok := vals[k]; ok {
+		if val, ok := vals[k]; ok { // overwrite it
 			newenv = append(newenv, fmt.Sprintf("%s=%s", k, val))
+			vals[k] = "" // mark it has deleted
 		} else {
 			newenv = append(newenv, fmt.Sprintf("%s=%s", k, parts[1]))
 		}
 	}
+	// now append the "new" ones
+	for k, val := range vals {
+		if len(val) != 0 {
+			newenv = append(newenv, fmt.Sprintf("%s=%s", k, val))
+		}
+
+	}
+
 	return newenv
 }
 
@@ -47,6 +56,25 @@ func Join(path string, elements ...string) string {
 func (g *GoEnv) Install(root string) {
 
 	cmd := exec.Command("go", "install", "./src/...")
+
+	locals := map[string]string{
+		"GOPATH": Join(root, g.gopath),
+	}
+	env := g.BuildEnv(locals)
+
+	cmd.Env = env
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = root // asbolute path of the project
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%v\n", err)
+	}
+}
+
+func (g *GoEnv) Test(root string) {
+
+	cmd := exec.Command("go", "test", "./src/...")
 
 	locals := map[string]string{
 		"GOPATH": Join(g.gopath, root),
@@ -70,8 +98,8 @@ func (g *GoEnv) Get(pack string) {
 	locals := map[string]string{
 		"GOPATH": g.gopath,
 	}
+	fmt.Printf("GOPATH = %v\n", g.gopath)
 	env := g.BuildEnv(locals)
-	fmt.Println(env)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

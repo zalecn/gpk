@@ -2,7 +2,6 @@ package gopackage
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -56,10 +55,19 @@ func (v *Version) Reference() (vref VersionReference) {
 	}
 }
 
-func (v *Version) String() string {
-	return fmt.Sprintf("%s-%d.%d.%d.%d", v.Root, v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3])
+func (v Version) String() string {
+	return v.Path()
+}
+
+func (v *Version) Digits() string {
+	return fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3])
 }
 
 func (v *Version) Path() string {
-	return filepath.Join(v.Root, fmt.Sprintf("%d.%d.%d.%d", v.Parts[0], v.Parts[1], v.Parts[2], v.Parts[3]))
+	if len(v.Root) ==0 {
+		return v.Digits()
+	} else {
+		return fmt.Sprintf("%s-%s", v.Root, v.Digits() )
+	}
+	panic("unreachable statement")
 }

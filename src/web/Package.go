@@ -13,7 +13,7 @@ import (
 
 //a Package is a pure, in-memory representation of a Package
 type Package struct {
-	Group, Artifact, Root, Version string
+	Name,  Root, Version string
 	ContentBlob                    appengine.BlobKey // tar.gz of the content
 	Release                        bool              // whether its a release or not
 	Timestamp                      time.Time         // version timestamp
@@ -75,16 +75,15 @@ func receive(w http.ResponseWriter, r *http.Request) {
 
 	// identify the package
 	vals := r.URL.Query()
-	group := vals.Get("g")    // todo validate the syntax
-	artifact := vals.Get("a") // todo validate the syntax
+	name := vals.Get("n")    // todo validate the syntax
 	version := gopackage.ParseVersionReference(vals.Get("v"))
 	release, _ := strconv.ParseBool(vals.Get("r"))
 	timestamp, _ := time.Parse(time.ANSIC, vals.Get("t"))
 
-	s.Debugf("upload release=%t %v:%v:%v \n", release, group, artifact, version)
+	s.Debugf("upload release=%t %v:%v \n", name, version)
 
 	// try to get the package if it already exists
-	pr := gopackage.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(name, version)
 	p, err := s.Get(pr)
 	if p != nil {
 		s.Debugf("project already exists \n")
@@ -98,8 +97,7 @@ func receive(w http.ResponseWriter, r *http.Request) {
 	blob, err := s.CreateBlob(r.Body) // create and fill the blob
 	if p == nil {
 		p = &Package{
-			Group:     group,
-			Artifact:  artifact,
+			Name:     name,
 			Root:      version.Root,
 			Version:   version.Parts,
 			Release:   release,
@@ -124,16 +122,15 @@ func receive(w http.ResponseWriter, r *http.Request) {
 // return a 404 if there is no newer version
 func newer(w http.ResponseWriter, r *http.Request) {
 	s := New(r)
-	group := r.FormValue("g")
-	artifact := r.FormValue("a")
+	name := r.FormValue("n")
 	version := gopackage.ParseVersionReference(r.FormValue("v"))
 	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
 
-	if group == "" || artifact == "" {
+	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := gopackage.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(name, version)
 	p, err := s.Get(pr)
 	if p == nil || err == datastore.ErrNoSuchEntity {
 		http.NotFound(w, r)
@@ -148,16 +145,15 @@ func newer(w http.ResponseWriter, r *http.Request) {
 
 func serve(w http.ResponseWriter, r *http.Request) {
 	s := New(r)
-	group := r.FormValue("g")
-	artifact := r.FormValue("a")
+	name := r.FormValue("n")
 	version := gopackage.ParseVersionReference(r.FormValue("v"))
 	release, _ := strconv.ParseBool(r.FormValue("r"))
 
-	if group == "" || artifact == "" {
+	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := gopackage.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(name, version)
 	s.Debugf("processing serve\n")
 	p, err := s.Get(pr)
 	if err == datastore.ErrNoSuchEntity {

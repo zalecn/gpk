@@ -1,6 +1,7 @@
 package gopackage
 
-import ()
+import (
+)
 
 const (
 	Cmd               = "gpk"
@@ -13,3 +14,4 @@ const (
 )
 
 // TODO parse in a yaml or xml format
+

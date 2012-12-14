@@ -17,7 +17,7 @@ a Project is an in memomry representation of a real go project on the disk.
 */
 type Project struct {
 	Root            string   // absolute path of the root, other pathes are relative 
-	Group, Artifact string   // the identity  of the project
+	Name string   // the identity  of the project
 	Version         *Version //optional, only for deployed instances 
 	Snapshot        *bool    // optional 
 	//	Target       string   // path to the target dir where we can generate stuff
@@ -27,8 +27,7 @@ type Project struct {
 //NewProject creates a new Project object with default values.
 func NewProject() *Project {
 	return &Project{
-		Group:        "",
-		Artifact:     "",
+		Name:        "",
 		Dependencies: make([]ProjectReference, 0),
 	}
 }
@@ -39,7 +38,7 @@ func ReadProject() (p *Project, err error) {
 }
 
 func (prj *Project) Reference() (p ProjectReference) {
-	return NewProjectReference(prj.Group, prj.Artifact, prj.Version.Reference())
+	return NewProjectReference(prj.Name, prj.Version.Reference())
 }
 
 //ReadProjectFile local info from the specified gopackage file
@@ -187,5 +186,5 @@ func (p *Project) String() string {
 	for _, dep := range p.Dependencies {
 		dependencies += fmt.Sprintf("\n  -> %v", dep)
 	}
-	return fmt.Sprintf("%v:%v%v\n", p.Group, p.Artifact, dependencies)
+	return fmt.Sprintf("%v:%v\n", p.Name, dependencies)
 }

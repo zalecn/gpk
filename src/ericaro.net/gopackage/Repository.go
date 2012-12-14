@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,13 +12,17 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"log"
 )
+
+
 
 //a Repository is a directory where dependencies are stored
 // they are splitted into releases, and snapshots
 type Repository struct {
 	Root       string // absolute path to the repository root
 	ServerHost string
+	Silent bool
 }
 
 func NewDefaultRepository() (r *Repository, err error) {
@@ -36,6 +39,7 @@ func NewRepository(root string) (r *Repository, err error) {
 	r = &Repository{
 		Root:       root,
 		ServerHost: GopackageCentral,
+		Silent : false,
 	}
 	return
 }
@@ -66,24 +70,25 @@ func (r *Repository) findLocalProject(mode string, p ProjectReference) (prj *Pro
 // if the repository is in snapshot mode it looks for a snapshot version first.
 // if it fails or if is not in snapshot mode it looks for a release version.
 func (r *Repository) FindProject(p ProjectReference, searchSnapshot, offline, update bool) (prj *Project, err error) {
-	log.Printf("lookup for %v ", p)
-	log.Printf("    in Release\n")
+	if !r.Silent {fmt.Printf("looking for %-30.30s ", p.String())}
+	if !r.Silent {fmt.Printf("    in Release ...")}
 	prj, err = r.findLocalProject(Release, p)
 	if searchSnapshot && prj == nil { // search for snapshot if and only if needed
-		log.Printf("    in Snapshot ...")
+		if !r.Silent {fmt.Printf("    in Snapshot ...")}
 		prj, err = r.findLocalProject(Snapshot, p)
 	}
+	
 	if !offline { // go for the central server
 		if prj == nil {
-			log.Printf("    in Remote ...")
+			if !r.Silent {fmt.Printf("    in Remote ...")}
 			prj, err = r.DownloadProject(p, searchSnapshot) // check for it on the web
 		} else if update { // prj has been found, but I want to check for update
 			// there are some sub cases where I DO  want to check for update
 			if searchSnapshot && *prj.Snapshot {
-				log.Printf("  check Update ...")
+				if !r.Silent {fmt.Printf("  check Update ...")}
 				if newer, _ := r.CheckNewerProject(prj); newer {
 					// there is a new project
-					log.Printf("  dl Update %v ...", p)
+					if !r.Silent {fmt.Printf("  dl Update  ...", p)}
 					prjnew, err := r.DownloadProject(p, searchSnapshot)
 					if err != nil {
 						return nil, err // failed to download
@@ -97,7 +102,7 @@ func (r *Repository) FindProject(p ProjectReference, searchSnapshot, offline, up
 	if prj == nil {
 		err = errors.New(fmt.Sprintf("Missing dependency %v.\nCaused by:%v", p, err))
 	} else {
-		log.Printf(" found\n")
+		if !r.Silent {fmt.Printf(" found\n")}
 	}
 	return
 }
@@ -149,8 +154,7 @@ func (r *Repository) UploadProject(p *Project) (err error) {
 	// prepare central server query args
 
 	v := url.Values{}
-	v.Set("g", p.Group)
-	v.Set("a", p.Artifact)
+	v.Set("n", p.Name)
 	v.Set("v", p.Version.String())
 	if *p.Snapshot {
 		v.Set("r", "false")
@@ -192,8 +196,7 @@ func (r *Repository) CheckNewerProject(p *Project) (yes bool, err error) {
 		return false, errors.New("Illegal project state. It must be fully qualified: Version field must be defined")
 	}
 	v := url.Values{}
-	v.Set("g", p.Group)
-	v.Set("a", p.Artifact)
+	v.Set("n", p.Name)
 	v.Set("v", p.Version.String())
 	v.Set("t", p.Version.Timestamp.Format(time.ANSIC))
 
@@ -219,8 +222,7 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 
 	// prepare central server query args
 	v := url.Values{}
-	v.Set("g", p.Group)
-	v.Set("a", p.Artifact)
+	v.Set("n", p.Name)
 	v.Set("v", p.Version.String())
 	if !searchSnapshot {
 		v.Set("r", "true")
@@ -254,7 +256,7 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 	}
 
 	// computes the project relative path 
-	prjPath := filepath.Join(prj.Group, prj.Artifact, prj.Version.Path())
+	prjPath := filepath.Join(prj.Name, prj.Version.Path())
 	mode := Snapshot
 	if prj.Snapshot == nil {
 		err = errors.New("Invalid packaged project format: does not define the snapshot attribute")
@@ -272,15 +274,20 @@ func (r *Repository) DownloadProject(p ProjectReference, searchSnapshot bool) (p
 func (r *Repository) GoGetInstall(pack string) {
 	prj := NewGoGetProjectReference(pack, ParseVersionReference("bigbang-0.0.0.0"))
 	fmt.Printf("getting %v as %s \n", pack, prj)
-	dst := filepath.Join(r.Root, Snapshot, prj.Group, prj.Artifact, prj.Version.Path())
+	dst := filepath.Join(r.Root, Snapshot, prj.Name, prj.Version.Path())
 	if exists(dst) {
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
 	g := NewGoEnv(dst)
 	g.Get(pack)
-
-	// computes the absolute path
+	
+	// append the .gpk file
+	p:= prj.Project()
+	p.Root = dst
+	file := filepath.Join(dst, GopackageFile)
+	fmt.Printf("storing project gpk into %v \n", file)
+	WriteProjectFile(file , p)
 
 }
 
@@ -300,7 +307,7 @@ func (r *Repository) InstallProject(prj *Project, v Version, snapshotMode bool) 
 	}
 
 	// computes the project relative path 
-	prjPath := filepath.Join(p.Group, p.Artifact, v.Path())
+	prjPath := filepath.Join(p.Name, v.Path())
 
 	// computes the absolute path
 	dst := filepath.Join(r.Root, mode, prjPath)

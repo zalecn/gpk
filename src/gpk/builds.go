@@ -3,14 +3,13 @@ package main
 import (
 	"ericaro.net/gopackage"
 	"fmt"
-	"os"
-	"strings"
 )
 
 func init() {
 	Reg(
 		&Compile,
 		&Install,
+		&Test,
 		&Deploy,
 		&Get,
 	)
@@ -37,6 +36,16 @@ var Install = Command{
 	RequireProject: true,
 }
 
+var Test = Command{
+	Name:           `test`,
+	Alias:          `t`,
+	UsageLine:      ``,
+	Short:          `Run test on the current project`,
+	Long:           `call go test on the current project.`,
+	call:           func(c *Command) { c.Test() },
+	RequireProject: true,
+}
+
 // TODO move around the remote tool chain
 var Deploy = Command{
 	Name:           `deploy`,
@@ -55,7 +64,7 @@ var Get = Command{
 	Short:          `Run go get a package and install it`,
 	Long:           `Run go get a package and install it`,
 	call:           func(c *Command) { c.Get() },
-	RequireProject: true,
+	RequireProject: false,
 }
 
 // The flag package provides a default help printer via -h switch
@@ -66,7 +75,8 @@ var compileUpdateFlag *bool = Compile.Flag.Bool("u", false, "Look for updated ve
 var compilePathOnlyFlag *bool = Compile.Flag.Bool("p", false, fmt.Sprintf("Does not run the compile, just print the gopath (suitable for scripting for instance: alias GP='export GOPATH=`%s compile -p`' )", gopackage.Cmd))
 
 func (c *Command) Compile() {
-
+	
+	c.Repository.Silent = *compilePathOnlyFlag
 	// parse dependencies, and build the gopath
 	dependencies, err := c.Repository.FindProjectDependencies(c.Project, !*compileReleaseFlag, *compileOfflineFlag, *compileUpdateFlag)
 	if err != nil {
@@ -76,15 +86,9 @@ func (c *Command) Compile() {
 
 	// run the go build command for local src, and with the appropriate gopath
 	gopath, err := c.Repository.GoPath(dependencies)
-	if *compilePathOnlyFlag {
-		path := make([]string, 0, 2)
-		if gopath != "" {
-			path = append(path, gopath)
-		}
-		path = append(path, c.Project.Root)
-		prjgopath := strings.Join(path, string(os.PathListSeparator))
 
-		fmt.Print(prjgopath)
+	if *compilePathOnlyFlag {
+		fmt.Print(gopackage.Join(c.Project.Root, gopath))
 		return
 	} else {
 		goEnv := gopackage.NewGoEnv(gopath)
@@ -114,7 +118,21 @@ func (c *Command) Get() {
 		// make a package group and name (based on package name)
 		// then assign a 0.0.0.0 version and snapshot
 		c.Repository.GoGetInstall(p)
-		// TO BE CONTINUED
-
 	}
+}
+
+func (c *Command) Test() {
+
+	
+	// parse dependencies, and build the gopath
+	dependencies, err := c.Repository.FindProjectDependencies(c.Project, !*compileReleaseFlag, *compileOfflineFlag, *compileUpdateFlag)
+	if err != nil {
+		fmt.Printf("Error Parsing the project's dependencies: %v", err)
+		return
+	}
+
+	// run the go build command for local src, and with the appropriate gopath
+	gopath, err := c.Repository.GoPath(dependencies)
+	goEnv := gopackage.NewGoEnv(gopath)
+	goEnv.Test(c.Project.Root)
 }
