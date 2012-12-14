@@ -1,4 +1,4 @@
-package got
+package gopackage
 
 import (
 	"archive/tar"
@@ -35,18 +35,17 @@ func NewProject() *Project {
 
 //ReadProject local info from the current dir
 func ReadProject() (p *Project, err error) {
-	return ReadProjectFile(GotFile)
+	return ReadProjectFile(GopackageFile)
 }
 
-
-func (prj *Project) Reference() (p ProjectReference){
-	return NewProjectReference(prj.Group, prj.Artifact, prj.Version.Reference() )
+func (prj *Project) Reference() (p ProjectReference) {
+	return NewProjectReference(prj.Group, prj.Artifact, prj.Version.Reference())
 }
 
-//ReadProjectFile local info from the specified got file
-func ReadProjectFile(gotpath string) (p *Project, err error) {
+//ReadProjectFile local info from the specified gopackage file
+func ReadProjectFile(gopackagepath string) (p *Project, err error) {
 	p = NewProject()
-	f, err := os.Open(gotpath)
+	f, err := os.Open(gopackagepath)
 	if err != nil {
 		return
 	}
@@ -54,11 +53,11 @@ func ReadProjectFile(gotpath string) (p *Project, err error) {
 
 	err = Decode(p, f)
 
-	p.Root, _ = filepath.Abs(path.Dir(gotpath))
+	p.Root, _ = filepath.Abs(path.Dir(gopackagepath))
 	return
 }
 
-//ReadProjectTar reads the .got file within the tar in memory. It does not set the Root
+//ReadProjectTar reads the .gopackage file within the tar in memory. It does not set the Root
 func ReadProjectInPackage(in io.Reader) (p *Project, err error) {
 	gz, err := gzip.NewReader(in)
 	if err != nil {
@@ -70,10 +69,10 @@ func ReadProjectInPackage(in io.Reader) (p *Project, err error) {
 		hdr, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
-				err = errors.New(fmt.Sprintf("Invalid package format, %v is missing", GotFile))
+				err = errors.New(fmt.Sprintf("Invalid package format, %v is missing", GopackageFile))
 			}
 		}
-		if hdr.Name == GotFile {
+		if hdr.Name == GopackageFile {
 			p = NewProject()
 			err = Decode(p, tr)
 			break
@@ -82,7 +81,7 @@ func ReadProjectInPackage(in io.Reader) (p *Project, err error) {
 	return
 }
 
-//Untar reads the .got file within the tar in memory. It does not set the Root
+//Untar reads the .gopackage file within the tar in memory. It does not set the Root
 func (p *Project) UnpackageProject(in io.Reader) (err error) {
 	gz, err := gzip.NewReader(in)
 	tr := tar.NewReader(in)
@@ -111,7 +110,7 @@ func (p *Project) UnpackageProject(in io.Reader) (err error) {
 
 //WriteProject local info from the current dir
 func WriteProject(p *Project) error {
-	return WriteProjectFile(GotFile, p)
+	return WriteProjectFile(GopackageFile, p)
 }
 func WriteProjectFile(file string, p *Project) (err error) {
 	f, err := os.Create(file)
@@ -131,6 +130,30 @@ func (p *Project) AppendDependency(ref ...ProjectReference) {
 	p.Dependencies = append(p.Dependencies, ref...)
 }
 
+func (p *Project) RemoveDependency(ref ProjectReference) {
+	src := p.Dependencies
+	is := make([]int, 0, len(src))
+	for i, r := range src {
+		if ref.Equals(r) {
+			is = append(is, i)
+		}
+	}
+	if len(is) == 0 { // nothing to do
+		return
+	}
+	dep := make([]ProjectReference, 0, len(src)-len(is))
+	length := len(is)
+	if is[0] > 0 {
+		dep = append(dep, src[0:is[0]]...)
+	}
+	for j := 0; j < length-1; j++ {
+		s, e := is[j]+1, is[j+1]
+		dep = append(dep, src[s:e]...)
+	}
+	// last bit of slice
+	p.Dependencies = dep
+}
+
 //PackageProject into a tar writer
 func (p Project) PackageProject(in io.Writer) (err error) {
 	p.Root = "" // delete the root before package, Note that we are working on a "copy" of the project
@@ -139,9 +162,9 @@ func (p Project) PackageProject(in io.Writer) (err error) {
 		return
 	}
 	defer gz.Close()
-	
+
 	tw := tar.NewWriter(gz)
-	
+
 	//prepare recursive handlers
 	dirHandler := func(ldst, lsrc string) (err error) {
 		return
@@ -154,8 +177,8 @@ func (p Project) PackageProject(in io.Writer) (err error) {
 
 	buf := new(bytes.Buffer)
 	EncodeProject(&p, buf)
-	TarBuff(filepath.Join("/", GotFile), buf, tw)
-	
+	TarBuff(filepath.Join("/", GopackageFile), buf, tw)
+
 	return
 }
 

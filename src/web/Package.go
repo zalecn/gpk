@@ -1,10 +1,10 @@
-package gotweb
+package gopackageweb
 
 import (
 	"appengine"
 	"appengine/blobstore"
 	"appengine/datastore"
-	"got.ericaro.net/got"
+	"ericaro.net/gopackage"
 	"io"
 	"net/http"
 	"strconv"
@@ -29,13 +29,13 @@ func New(r *http.Request) *PackageServer {
 	}
 }
 
-func (s *PackageServer) Put(key got.ProjectReference, p *Package) (k *datastore.Key, err error) {
+func (s *PackageServer) Put(key gopackage.ProjectReference, p *Package) (k *datastore.Key, err error) {
 	c := s.Context
 	k, err = datastore.Put(c, datastore.NewKey(c, "Package", key.String(), 0, nil), p)
 	return
 }
 
-func (s *PackageServer) Get(key got.ProjectReference) (p *Package, err error) {
+func (s *PackageServer) Get(key gopackage.ProjectReference) (p *Package, err error) {
 	c := s.Context
 	p = new(Package)
 	err = datastore.Get(c, datastore.NewKey(c, "Package", key.String(), 0, nil), p)
@@ -77,14 +77,14 @@ func receive(w http.ResponseWriter, r *http.Request) {
 	vals := r.URL.Query()
 	group := vals.Get("g")    // todo validate the syntax
 	artifact := vals.Get("a") // todo validate the syntax
-	version := got.ParseVersionReference(vals.Get("v"))
+	version := gopackage.ParseVersionReference(vals.Get("v"))
 	release, _ := strconv.ParseBool(vals.Get("r"))
 	timestamp, _ := time.Parse(time.ANSIC, vals.Get("t"))
 
 	s.Debugf("upload release=%t %v:%v:%v \n", release, group, artifact, version)
 
 	// try to get the package if it already exists
-	pr := got.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(group, artifact, version)
 	p, err := s.Get(pr)
 	if p != nil {
 		s.Debugf("project already exists \n")
@@ -126,14 +126,14 @@ func newer(w http.ResponseWriter, r *http.Request) {
 	s := New(r)
 	group := r.FormValue("g")
 	artifact := r.FormValue("a")
-	version := got.ParseVersionReference(r.FormValue("v"))
+	version := gopackage.ParseVersionReference(r.FormValue("v"))
 	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
 
 	if group == "" || artifact == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := got.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(group, artifact, version)
 	p, err := s.Get(pr)
 	if p == nil || err == datastore.ErrNoSuchEntity {
 		http.NotFound(w, r)
@@ -150,14 +150,14 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	s := New(r)
 	group := r.FormValue("g")
 	artifact := r.FormValue("a")
-	version := got.ParseVersionReference(r.FormValue("v"))
+	version := gopackage.ParseVersionReference(r.FormValue("v"))
 	release, _ := strconv.ParseBool(r.FormValue("r"))
 	
 	if group == "" || artifact == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := got.NewProjectReference(group, artifact, version)
+	pr := gopackage.NewProjectReference(group, artifact, version)
 	s.Debugf("processing serve\n")
 	p, err := s.Get(pr)
 	if err == datastore.ErrNoSuchEntity {

@@ -1,4 +1,4 @@
-package got
+package gopackage
 
 import (
 	"bytes"
@@ -15,11 +15,6 @@ import (
 	"time"
 )
 
-const (
-	DefaultRepository = ".gotepository"
-	Release           = "Release"
-	Snapshot          = "Snapshot"
-)
 
 //a Repository is a directory where dependencies are stored
 // they are splitted into releases, and snapshots
@@ -41,7 +36,7 @@ func NewRepository(root string) (r *Repository, err error) {
 
 	r = &Repository{
 		Root:       root,
-		ServerHost: GotCentral,
+		ServerHost: GopackageCentral,
 	}
 	return
 }
@@ -58,7 +53,7 @@ func (r *Repository) findLocalProject(mode string, p ProjectReference) (prj *Pro
 	// TODO hande offline and update here
 
 	relative := p.Path()
-	abs := filepath.Join(r.Root, mode, relative, GotFile)
+	abs := filepath.Join(r.Root, mode, relative, GopackageFile)
 	//log.Printf("Looking for %v into %v", p, abs)
 	if exists(abs) {
 		prj, err = ReadProjectFile(abs)
@@ -326,7 +321,7 @@ func (r *Repository) InstallProject(prj *Project, v Version, snapshotMode bool) 
 	}
 
 	walkDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src"), dirHandler, fileHandler)
-	WriteProjectFile(filepath.Join(dst, GotFile), &p)
+	WriteProjectFile(filepath.Join(dst, GopackageFile), &p)
 
 	if !snapshotMode { // if in release, then remove all the snapshots 
 		altDir := filepath.Join(r.Root, Snapshot, prjPath)

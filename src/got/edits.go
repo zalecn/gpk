@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"got.ericaro.net/got"
+	"ericaro.net/gopackage"
 	"strings"
 )
 
@@ -10,6 +10,7 @@ func init() {
 	Reg(
 		&Status,
 		&Add,
+		&Remove,
 		&Init,
 	)
 
@@ -17,15 +18,17 @@ func init() {
 
 var Status = Command{
 	Name:           `status`,
+	Alias:           `?`,
 	UsageLine:      ``,
-	Short:          `Prints current directory Got status.`,
+	Short:          `Prints current directory project status.`,
 	Long:           `Prints current directory status`,
 	call:           func(c *Command) { c.Status() },
 	RequireProject: true,
 }
 
 var Add = Command{
-	Name:      `add`,
+	Name:      `Add`,
+	Alias:      `+`,
 	UsageLine: `<dependencies>...`,
 	Short:     `Add dependencies to this project.`,
 	Long: `Dependencies are formatted as follow
@@ -42,11 +45,31 @@ var Add = Command{
 	call:           func(c *Command) { c.Add() },
 	RequireProject: true,
 }
+var Remove = Command{
+	Name:      `remove`,
+	Alias:      `-`,
+	UsageLine: `<dependencies>...`,
+	Short:     `Remove dependencies to this project.`,
+	Long: `Dependencies are formatted as follow
+	<group>:<name>:<version>
+	where   :
+	group   : is a simple name ( usually DNS name that identify a group )
+	artifact: is a simple name (usually not hierarchical )
+	version : is a version syntax
+	          <root>-X.X.X.X
+	          where:
+	          root : is a simple branch name
+	          X    : is an unsigned int  
+	`,
+	call:           func(c *Command) { c.Remove() },
+	RequireProject: true,
+}
 
 var Init = Command{
-	Name:      `init`,
+	Name:      `new`,
+	Alias:          `!`,
 	UsageLine: `group:name`,
-	Short:     `init the current directory as a got project.`,
+	Short:     `init the current directory as a gopackage project.`,
 	Long: `where   :
 	group   : is a simple name ( usually DNS name that identify a group )
 	artifact: is a simple name (usually not hierarchical )`,
@@ -62,7 +85,7 @@ func (c *Command) Status() {
 
 func (c *Command) Init() {
 
-	p, err := got.ReadProject()
+	p, err := gopackage.ReadProject()
 	if err == nil {
 		fmt.Printf("warning: init an existing project. This is fine if you want to edit it")
 	}
@@ -76,7 +99,7 @@ func (c *Command) Init() {
 	p.Artifact = parts[1]
 
 	c.Project = p // in case 
-	got.WriteProject(c.Project)
+	gopackage.WriteProject(c.Project)
 
 }
 
@@ -87,7 +110,7 @@ func (c *Command) Add() {
 		return
 	}
 	for _, v := range c.Flag.Args() {
-		ref, err := got.ParseProjectReference(v)
+		ref, err := gopackage.ParseProjectReference(v)
 		if err != nil {
 			fmt.Printf("  -X-> %v : fail to parse reference: %v\n", v, err)
 		} else {
@@ -96,5 +119,23 @@ func (c *Command) Add() {
 		}
 
 	}
-	got.WriteProject(c.Project)
+	gopackage.WriteProject(c.Project)
+}
+
+func (c *Command) Remove() {
+
+	if len(c.Flag.Args()) == 0 {
+		c.Flag.Usage()
+		return
+	}
+	for _, v := range c.Flag.Args() {
+		ref, err := gopackage.ParseProjectReference(v)
+		if err != nil {
+			fmt.Printf("  -X-> %v : fail to parse reference: %v\n", v, err)
+		} else {
+			fmt.Printf("  -> %v\n", v)
+			c.Project.RemoveDependency(ref)
+		}
+	}
+	gopackage.WriteProject(c.Project)
 }

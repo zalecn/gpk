@@ -1,4 +1,4 @@
-package got
+package gopackage
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package got
+package gopackage
 
 import (
 	"strings"
@@ -31,6 +31,10 @@ func NewProjectReference(group, artifact string, version VersionReference) Proje
 	Artifact: artifact,
 	Version: version,
 	}
+}
+
+func (this ProjectReference) Equals(that ProjectReference) bool {
+	return this.String() == that.String()
 }
 
 func (p *ProjectReference) Project() (prj *Project) {

@@ -3,23 +3,26 @@ package main
 import (
 	"flag"
 	"fmt"
-	"got.ericaro.net/got"
+	"ericaro.net/gopackage"
 	"os"
 )
 
-// here are got flags not specific ones
+// here are gopackage flags not specific ones
 
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
-var hostFlag *string  = flag.String("host", got.GotCentral, "Set the host for the central server")
+var hostFlag *string  = flag.String("host", gopackage.GopackageCentral, "Set the host for the central server")
 
 
 
 var Commands map[string]*Command = make(map[string]*Command)
+var AllCommands []*Command = make([]*Command, 0)
 
 func Reg(commands ...*Command) {
 	for _,c:= range commands {
 		Commands[c.Name] = c
+		Commands[c.Alias] = c
 	}
+	AllCommands = append(AllCommands, commands...)
 }
 
 
@@ -27,29 +30,34 @@ func main() {
 
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
-		fmt.Println("Version:", got.GotVersion)
+		fmt.Println("Version:", gopackage.GopackageVersion)
 		return
 	}
 	
 
 	cmdName := flag.Arg(0)
-	cmd := Commands[cmdName]
-	if cmd == nil {
-		fmt.Printf("Unknown command %v. Available commands are:\n", cmdName)
-		for k, c := range Commands {
-			fmt.Printf("  got %-10s %s\n", k, c.Short)
+	cmd,ok := Commands[cmdName]
+	if !ok {
+		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
+		
+		fmt.Printf("%s [general options] <alias|name> [options]  \n", gopackage.Cmd)
+		fmt.Printf("  %-8s %-10s %s\n",  "alias", "name","description")
+	   fmt.Printf("  -------------------\n")
+		
+		for _, c := range AllCommands {
+			fmt.Printf("  %-8s %-10s %s\n",  c.Alias, c.Name, c.Short)
 		}
 		return
 	}
 
-	r, err := got.NewDefaultRepository()
+	r, err := gopackage.NewDefaultRepository()
 	handleError(err)
 	r.ServerHost = *hostFlag
 	
 	cmd.Repository = r
 	
 	if cmd.RequireProject {
-		p, err := got.ReadProject()
+		p, err := gopackage.ReadProject()
 		handleError(err)
 		cmd.Project = p
 	}
@@ -72,11 +80,11 @@ type Commander interface{Run()}
 type Command struct {
 	
 	call                    func(c *Command)
-	Name,UsageLine, Short, Long string
+	Name,Alias, UsageLine, Short, Long string
 	Flag                  flag.FlagSet
 	RequireProject         bool
-	Project                *got.Project
-	Repository             *got.Repository
+	Project                *gopackage.Project
+	Repository             *gopackage.Repository
 }
 
 func (c *Command) Run() {
