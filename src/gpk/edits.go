@@ -3,6 +3,7 @@ package main
 import (
 	"ericaro.net/gopackage"
 	"fmt"
+	"os"
 )
 
 func init() {
@@ -28,13 +29,10 @@ var Status = Command{
 var Add = Command{
 	Name:      `add`,
 	Alias:     `+`,
-	UsageLine: `<dependencies>...`,
-	Short:     `Add dependencies to this project.`,
-	Long: `Dependencies are formatted as follow
-	<group>:<name>:<version>
-	where   :
-	group   : is a simple name ( usually DNS name that identify a group )
-	artifact: is a simple name (usually not hierarchical )
+	UsageLine: `<name> <version>`,
+	Short:     `Add a dependency to this project.`,
+	Long: `Dependency is formatted as follow
+	name    : any string
 	version : is a version syntax
 	          <root>-X.X.X.X
 	          where:
@@ -47,12 +45,11 @@ var Add = Command{
 var Remove = Command{
 	Name:      `remove`,
 	Alias:     `-`,
-	UsageLine: `<dependencies>...`,
-	Short:     `Remove dependencies to this project.`,
+	UsageLine: `<name> <version>`,
+	Short:     `Remove dependency from this project.`,
 	Long: `Dependencies are formatted as follow
-	<group>:<name>:<version>
 	where   :
-	group   : is a simple name ( usually DNS name that identify a group )
+	name    : any string
 	artifact: is a simple name (usually not hierarchical )
 	version : is a version syntax
 	          <root>-X.X.X.X
@@ -67,11 +64,10 @@ var Remove = Command{
 var Init = Command{
 	Name:      `init`,
 	Alias:     `!`,
-	UsageLine: `group:name`,
+	UsageLine: `<name>`,
 	Short:     `Init the current directory as a gopackage project.`,
 	Long: `where   :
-	group   : is a simple name ( usually DNS name that identify a group )
-	artifact: is a simple name (usually not hierarchical )`,
+	name   : any string`,
 	call: func(c *Command) { c.Init() },
 }
 
@@ -89,44 +85,39 @@ func (c *Command) Init() {
 		fmt.Printf("warning: init an existing project. This is fine if you want to edit it\n")
 	}
 	p.Name = c.Flag.Arg(0)
-	c.Project = p // in case 
-	gopackage.WriteProject(c.Project)
+	c.Project = p // in case we implement sequence of commands (in the future)
+	p.Root, err = os.Getwd()
+	if err!=nil {
+		fmt.Printf("Cannot create the project, there is no current directory. Because %v\n", err)
+	}
+	gopackage.WriteProjectSrc(c.Project)
 
 }
 
 func (c *Command) Add() {
 
-	if len(c.Flag.Args()) == 0 {
+	if len(c.Flag.Args()) != 2 {
 		c.Flag.Usage()
 		return
 	}
-	for _, v := range c.Flag.Args() {
-		ref, err := gopackage.ParseProjectReference(v)
-		if err != nil {
-			fmt.Printf("  -X-> %v : fail to parse reference: %v\n", v, err)
-		} else {
-			fmt.Printf("  -> %v\n", v)
-			c.Project.AppendDependency(ref)
-		}
+	name, version := c.Flag.Arg(0), c.Flag.Arg(1)
+	ref := gopackage.NewProjectReference(name, gopackage.ParseVersionReference(version))
+	fmt.Printf("  -> %v\n", ref)
+	c.Project.AppendDependency(ref)
 
-	}
-	gopackage.WriteProject(c.Project)
+	gopackage.WriteProjectSrc(c.Project)
 }
 
 func (c *Command) Remove() {
 
-	if len(c.Flag.Args()) == 0 {
+	if len(c.Flag.Args())  != 2 {
 		c.Flag.Usage()
 		return
 	}
-	for _, v := range c.Flag.Args() {
-		ref, err := gopackage.ParseProjectReference(v)
-		if err != nil {
-			fmt.Printf("  -X-> %v : fail to parse reference: %v\n", v, err)
-		} else {
-			fmt.Printf("  -> %v\n", v)
-			c.Project.RemoveDependency(ref)
-		}
-	}
-	gopackage.WriteProject(c.Project)
+	name, version := c.Flag.Arg(0), c.Flag.Arg(1)
+	ref := gopackage.NewProjectReference(name, gopackage.ParseVersionReference(version))
+
+	fmt.Printf("  -> %v\n", ref)
+	c.Project.RemoveDependency(ref)
+	gopackage.WriteProjectSrc(c.Project)
 }

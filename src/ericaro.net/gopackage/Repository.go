@@ -285,9 +285,7 @@ func (r *Repository) GoGetInstall(pack string) {
 	// append the .gpk file
 	p:= prj.Project()
 	p.Root = dst
-	file := filepath.Join(dst, GopackageFile)
-	fmt.Printf("storing project gpk into %v \n", file)
-	WriteProjectFile(file , p)
+	WriteProjectPkg(p)   
 
 }
 
@@ -311,6 +309,7 @@ func (r *Repository) InstallProject(prj *Project, v Version, snapshotMode bool) 
 
 	// computes the absolute path
 	dst := filepath.Join(r.Root, mode, prjPath)
+	p.Root = dst
 	if exists(dst) {
 		os.RemoveAll(dst)
 	}
@@ -327,7 +326,7 @@ func (r *Repository) InstallProject(prj *Project, v Version, snapshotMode bool) 
 	}
 
 	walkDir(filepath.Join(dst, "src"), filepath.Join(p.Root, "src"), dirHandler, fileHandler)
-	WriteProjectFile(filepath.Join(dst, GopackageFile), &p)
+	WriteProjectPkg(&p)
 
 	if !snapshotMode { // if in release, then remove all the snapshots 
 		altDir := filepath.Join(r.Root, Snapshot, prjPath)

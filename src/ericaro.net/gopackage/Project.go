@@ -13,10 +13,11 @@ import (
 )
 
 /*
-a Project is an in memomry representation of a real go project on the disk.
+a Project is an in memory representation of a real go project on the disk.
+It is serialized on the local project disk
 */
 type Project struct {
-	Root            string   // absolute path of the root, other pathes are relative 
+	Root            string  `json:"-"` // absolute path of the root, other pathes are relative 
 	Name string   // the identity  of the project
 	Version         *Version //optional, only for deployed instances 
 	Snapshot        *bool    // optional 
@@ -107,17 +108,26 @@ func (p *Project) UnpackageProject(in io.Reader) (err error) {
 	return
 }
 
-//WriteProject local info from the current dir
-func WriteProject(p *Project) error {
-	return WriteProjectFile(GopackageFile, p)
+//TODO there are too many ways to write a project. And in particular, it gets sometimes
+// with unwanted values (like the local path etc.) analyse the calling track and split the
+// use cases
+
+//WriteProjectSrc into a source project
+func WriteProjectSrc(p *Project) error {
+	return writeProject( *p) 
 }
-func WriteProjectFile(file string, p *Project) (err error) {
-	f, err := os.Create(file)
+//WriteProjectPkg into a packaged project
+func WriteProjectPkg(p *Project) error {
+	return writeProject(*p) 
+}
+func writeProject(p Project) (err error) {
+	dst := filepath.Join(p.Root, GopackageFile)
+	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	err = EncodeProject(p, f)
+	err = EncodeProject(&p, f)
 	return err
 }
 func EncodeProject(p *Project, w io.Writer) (err error) {

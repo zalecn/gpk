@@ -1,7 +1,1 @@
-{
-	"Name":"ericaro.net/gopackage",
-	"Dependencies":[
-		{"Name":"google.com/appengine",
-		"Version":{"Root":"bigbang","Parts":"0.0.0.0"}}
-		]
-}
+{"Name":"ericaro.net/gopackage","Version":null,"Snapshot":null,"Dependencies":[{"Name":"google.com/appengine","Version":{"Root":"bigbang","Parts":"0.0.0.0"}}]}

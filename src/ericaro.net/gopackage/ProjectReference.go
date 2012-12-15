@@ -1,33 +1,22 @@
 package gopackage
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 )
 
+
 // ProjectReference is just a way to keep references to another project
 type ProjectReference struct {
-	Name string // the symbolic name for this project.
-	Version         VersionReference
-}
-
-func ParseProjectReference(value string) (p ProjectReference, err error) {
-	p = ProjectReference{}
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		errors.New("Invalid Project Reference Format")
-	}
-	p.Name = parts[0]
-	p.Version = ParseVersionReference(parts[1])
-	return
+	Name    string // the symbolic name for this project.
+	Version VersionReference
 }
 
 func NewProjectReference(name string, version VersionReference) ProjectReference {
 	return ProjectReference{
 		Name:    name,
-		Version:  version,
+		Version: version,
 	}
 }
 
@@ -35,10 +24,11 @@ func (this ProjectReference) Equals(that ProjectReference) bool {
 	return this.String() == that.String()
 }
 
+//Project creates a new Empty Project that will be referenced by this reference.
 func (p *ProjectReference) Project() (prj *Project) {
 	return &Project{
 		Name:    p.Name,
-		Version:  p.Version.Version(),
+		Version: p.Version.Version(),
 	}
 }
 
@@ -49,7 +39,7 @@ func NewGoGetProjectReference(pack string, version VersionReference) ProjectRefe
 	}
 	return ProjectReference{
 		Name:    pack,
-		Version:  version,
+		Version: version,
 	}
 }
 
