@@ -1,12 +1,14 @@
 package gpk
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"io"
-	"bytes"
+	"strings"
+	"time"
 )
 
 const (
@@ -15,9 +17,9 @@ const (
 
 //RemoteRepository is any code that can act as a remote. usually a project has a chain of remote repository where to look
 type RemoteRepository interface {
-CheckPackageUpdate(p *Package) (newer bool, err error)
-ReadPackage(p ProjectID) (r io.Reader, err error)
-// TODO provide some "reader" from the remote, so local can copy it down
+	CheckPackageUpdate(p *Package) (newer bool, err error)
+	ReadPackage(p ProjectID) (r io.Reader, err error)
+	// TODO provide some "reader" from the remote, so local can copy it down
 }
 
 type LocalRepository struct {
@@ -60,8 +62,9 @@ func (r *LocalRepository) FindPackage(p ProjectID) (prj *Package, err error) {
 func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 
 	p = &Package{
-		self:    *prj,
-		version: v,
+		self:      *prj,
+		version:   v,
+		timestamp: time.Now(),
 	}
 	// computes the project relative path 
 	// computes the absolute path
@@ -131,7 +134,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remote RemoteRepos
 	return
 }
 
-func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID)(prj *Package, err error) {
+func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID) (prj *Package, err error) {
 	reader, err := remote.ReadPackage(p)
 	if err != nil {
 		return nil, err
@@ -142,15 +145,26 @@ func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID)(
 	if err != nil {
 		return
 	}
-	
+
 	prj, err = ReadPackageInPackage(buf) // foretell the package object from within a buffer
 	if err != nil {
 		return
 	}
-	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String() )
+	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String())
 	prj.Unpack(buf) // now I know the target I can unpack it.
 	return
 
 }
+
+func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err error) {
+	sources := make([]string, 0, len(dependencies))
+	for _, pr := range dependencies {
+		sources = append(sources, pr.self.workingDir) // here if you are smart you can build a gopath on a snapshot dependency ;-) for real
+	}
+	gopath = strings.Join(sources, string(os.PathListSeparator))
+	return
+}
+
+// add listing capacities (list current version for a given package) 
 
 // resolve dependencies? include local search and repo tree search, not local info)

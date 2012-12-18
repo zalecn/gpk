@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ericaro.net/gopackage"
+	. "ericaro.net/gpk"
 	"fmt"
 	"os"
 )
@@ -80,17 +80,20 @@ func (c *Command) Status() {
 
 func (c *Command) Init() {
 
-	p, err := gopackage.ReadProject()
+	p, err := ReadProject()
 	if err == nil {
 		fmt.Printf("warning: init an existing project. This is fine if you want to edit it\n")
 	}
-	p.Name = c.Flag.Arg(0)
+	p.SetName( c.Flag.Arg(0) )
+	pwd , err := os.Getwd()
+	p.SetWorkingDir(pwd)
+	
 	c.Project = p // in case we implement sequence of commands (in the future)
-	p.Root, err = os.Getwd()
+	
 	if err!=nil {
 		fmt.Printf("Cannot create the project, there is no current directory. Because %v\n", err)
 	}
-	gopackage.WriteProjectSrc(c.Project)
+	p.Write()
 
 }
 
@@ -101,11 +104,13 @@ func (c *Command) Add() {
 		return
 	}
 	name, version := c.Flag.Arg(0), c.Flag.Arg(1)
-	ref := gopackage.NewProjectReference(name, gopackage.ParseVersionReference(version))
+	v, _ :=ParseVersion(version)
+	ref := NewProjectID(name, v)
 	fmt.Printf("  -> %v\n", ref)
+	
 	c.Project.AppendDependency(ref)
-
-	gopackage.WriteProjectSrc(c.Project)
+	
+	c.Project.Write()
 }
 
 func (c *Command) Remove() {
@@ -115,9 +120,10 @@ func (c *Command) Remove() {
 		return
 	}
 	name, version := c.Flag.Arg(0), c.Flag.Arg(1)
-	ref := gopackage.NewProjectReference(name, gopackage.ParseVersionReference(version))
+	v, _ :=ParseVersion(version)
+	ref := NewProjectID(name, v )
 
 	fmt.Printf("  -> %v\n", ref)
 	c.Project.RemoveDependency(ref)
-	gopackage.WriteProjectSrc(c.Project)
+	c.Project.Write()
 }

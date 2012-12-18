@@ -1,16 +1,24 @@
 package main
 
 import (
-	"ericaro.net/gopackage"
+	. "ericaro.net/gpk"
 	"flag"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
+)
+
+const (
+	Cmd               = "gpk"
+	GopackageCentral  = "gpk.ericaro.net"
+	GopackageVersion  = "0.0.0.1" //?
+	DefaultRepository = ".gpkrepository"
 )
 
 // here are gopackage flags not specific ones
 
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
-var hostFlag *string = flag.String("host", gopackage.GopackageCentral, "Set the host for the central server")
 
 var Commands map[string]*Command = make(map[string]*Command)
 var AllCommands []*Command = make([]*Command, 0)
@@ -27,7 +35,7 @@ func main() {
 
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
-		fmt.Println("Version:", gopackage.GopackageVersion)
+		fmt.Println("Version:", GopackageVersion)
 		return
 	}
 
@@ -36,7 +44,7 @@ func main() {
 	if !ok {
 		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
 
-		fmt.Printf("%s [general options] <alias|name> [options]  \n", gopackage.Cmd)
+		fmt.Printf("%s [general options] <alias|name> [options]  \n", Cmd)
 		fmt.Printf("  %-8s %-10s %s\n", "alias", "name", "description")
 		fmt.Printf("  -------------------\n")
 
@@ -46,14 +54,13 @@ func main() {
 		return
 	}
 
-	r, err := gopackage.NewDefaultRepository()
+	r, err := NewLocalRepository(DefaultRepository)
 	handleError(err)
-	r.ServerHost = *hostFlag
-
+	
 	cmd.Repository = r
 
 	if cmd.RequireProject {
-		p, err := gopackage.ReadProject()
+		p, err := ReadProject()
 		handleError(err)
 		cmd.Project = p
 	}
@@ -61,6 +68,11 @@ func main() {
 	handleError(err)
 	cmd.Run()
 
+}
+
+func NewDefaultRepository() (r *LocalRepository, err error) {
+	u, _ := user.Current()
+	return NewLocalRepository(filepath.Join(u.HomeDir, DefaultRepository))
 }
 
 func handleError(err error) {
@@ -79,8 +91,8 @@ type Command struct {
 	Name, Alias, UsageLine, Short, Long string
 	Flag                                flag.FlagSet
 	RequireProject                      bool
-	Project                             *gopackage.Project
-	Repository                          *gopackage.Repository
+	Project                             *Project
+	Repository                          *LocalRepository
 }
 
 func (c *Command) Run() {

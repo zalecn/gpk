@@ -1,7 +1,8 @@
 package main
 
 import (
-	"ericaro.net/gopackage"
+	. "ericaro.net/gpk"
+	"ericaro.net/gpk/gocmd"
 	"fmt"
 )
 
@@ -69,16 +70,16 @@ var Get = Command{
 
 // The flag package provides a default help printer via -h switch
 var compileVersionFlag *bool = Compile.Flag.Bool("v", false, "Print the version number.")
-var compileReleaseFlag *bool = Compile.Flag.Bool("r", false, "Build using only release dependencies.")
-var compileOfflineFlag *bool = Compile.Flag.Bool("o", false, "Try to find missing dependencies at http://gopackage.ericaro.net")
+var compileOfflineFlag *bool = Compile.Flag.Bool("o", false, "Try to find missing dependencies at http://gpk.ericaro.net")
 var compileUpdateFlag *bool = Compile.Flag.Bool("u", false, "Look for updated version of dependencies")
-var compilePathOnlyFlag *bool = Compile.Flag.Bool("p", false, fmt.Sprintf("Does not run the compile, just print the gopath (suitable for scripting for instance: alias GP='export GOPATH=`%s compile -p`' )", gopackage.Cmd))
+var compilePathOnlyFlag *bool = Compile.Flag.Bool("p", false, fmt.Sprintf("Does not run the compile, just print the gopath (suitable for scripting for instance: alias GP='export GOPATH=`%s compile -p`' )", Cmd))
 
 func (c *Command) Compile() {
-	
-	c.Repository.Silent = *compilePathOnlyFlag
+
 	// parse dependencies, and build the gopath
-	dependencies, err := c.Repository.FindProjectDependencies(c.Project, !*compileReleaseFlag, *compileOfflineFlag, *compileUpdateFlag)
+	// todo remote should be read from the project
+	remote, _ := NewHttpRemoteRepository(GopackageCentral)
+	dependencies, err := c.Repository.ResolveDependencies(c.Project, remote, *compileOfflineFlag, *compileUpdateFlag)
 	if err != nil {
 		fmt.Printf("Error Parsing the project's dependencies: %v", err)
 		return
@@ -88,47 +89,41 @@ func (c *Command) Compile() {
 	gopath, err := c.Repository.GoPath(dependencies)
 
 	if *compilePathOnlyFlag {
-		fmt.Print(gopackage.Join(c.Project.Root, gopath))
+		fmt.Print(gocmd.Join(c.Project.WorkingDir(), gopath))
 		return
 	} else {
-		goEnv := gopackage.NewGoEnv(gopath)
-		goEnv.Install(c.Project.Root)
+		goEnv := gocmd.NewGoEnv(gopath)
+		goEnv.Install(c.Project.WorkingDir())
 	}
 
 }
 
-var installReleaseFlag *bool = Install.Flag.Bool("r", false, "Install as a Release in the local Repository")
-
 func (c *Command) Install() {
-	version := gopackage.ParseVersion(c.Flag.Arg(0))
-	c.Repository.InstallProject(c.Project, version, !*installReleaseFlag)
+	version, _ := ParseVersion(c.Flag.Arg(0))
+	c.Repository.InstallProject(c.Project, version)
 }
 
-var deployReleaseFlag *bool = Deploy.Flag.Bool("r", false, "Deploy as a Release in the Central Repository")
-
 func (c *Command) Deploy() {
-	
-	
-	version := gopackage.ParseVersion(c.Flag.Arg(0))
-	fmt.Printf("deploy %s %v to %s\n", c.Project.Name, version, c.Repository.ServerHost)
 
-	c.Repository.DeployProject(c.Project, version, !*deployReleaseFlag)
+	//version, _ := ParseVersion(c.Flag.Arg(0))
+	panic("not yet implemented")
+	// TODO select the remote and then deploy
+	//c.Repository.DeployProject(c.Project, version)
 }
 
 func (c *Command) Get() {
-	for _, p := range c.Flag.Args() {
-
-		// make a package group and name (based on package name)
-		// then assign a 0.0.0.0 version and snapshot
-		c.Repository.GoGetInstall(p)
-	}
+		panic("not yet implemented")
+//	for _, p := range c.Flag.Args() {
+//		//TODO fill it
+//		//c.Repository.GoGetInstall(p)
+//	}
 }
 
 func (c *Command) Test() {
 
-	
 	// parse dependencies, and build the gopath
-	dependencies, err := c.Repository.FindProjectDependencies(c.Project, !*compileReleaseFlag, *compileOfflineFlag, *compileUpdateFlag)
+	remote, _ := NewHttpRemoteRepository(GopackageCentral)
+	dependencies, err := c.Repository.ResolveDependencies(c.Project, remote, *compileOfflineFlag, *compileUpdateFlag)
 	if err != nil {
 		fmt.Printf("Error Parsing the project's dependencies: %v", err)
 		return
@@ -136,6 +131,6 @@ func (c *Command) Test() {
 
 	// run the go build command for local src, and with the appropriate gopath
 	gopath, err := c.Repository.GoPath(dependencies)
-	goEnv := gopackage.NewGoEnv(gopath)
-	goEnv.Test(c.Project.Root)
+	goEnv := gocmd.NewGoEnv(gopath)
+	goEnv.Test(c.Project.WorkingDir())
 }

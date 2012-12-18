@@ -1,4 +1,4 @@
-package gopackage
+package gocmd
 
 import (
 	"fmt"
