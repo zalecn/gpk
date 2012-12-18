@@ -75,6 +75,7 @@ func (p *Package) Timestamp() time.Time {
 //Write package  info to where it belongs (package holds working dir info)
 func (p Package) Write() (err error) {
 	dst := filepath.Join(p.self.workingDir, GpkFile)
+	fmt.Printf("writing package to %s\n", dst)
 	f, err := os.Create(dst)
 	if err != nil {
 		return err

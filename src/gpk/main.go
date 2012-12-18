@@ -54,7 +54,8 @@ func main() {
 		return
 	}
 
-	r, err := NewLocalRepository(DefaultRepository)
+	r, err := NewDefaultRepository()
+	
 	handleError(err)
 	
 	cmd.Repository = r

@@ -69,7 +69,7 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	// computes the project relative path 
 	// computes the absolute path
 	dst := filepath.Join(r.root, p.Path())
-
+	fmt.Printf("Installing to %s %s %s\n",r.root, p.Path(),  dst)
 	_, err := os.Stat(dst)
 	if os.IsExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
@@ -87,6 +87,7 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	}
 	//makes the copy
 	walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
+	p.self.workingDir = dst
 	p.Write()
 	return
 }
@@ -124,6 +125,9 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remote RemoteRepos
 					}
 				}
 			}
+			if prj == nil {
+				return errors.New(fmt.Sprintf("Missing dependency: %v\n", d))
+			}
 			dependencies[d] = prj
 			err = r.findProjectDependencies(&prj.self, remote, dependencies, offline, update)
 			if err != nil {
@@ -139,6 +143,10 @@ func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID) 
 	if err != nil {
 		return nil, err
 	}
+	return r.Install(reader)
+}
+
+func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader) // download the tar.gz
 	//reader.Close()
@@ -163,6 +171,10 @@ func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err er
 	}
 	gopath = strings.Join(sources, string(os.PathListSeparator))
 	return
+}
+
+func (r LocalRepository) Root() string{
+	return r.root
 }
 
 // add listing capacities (list current version for a given package) 

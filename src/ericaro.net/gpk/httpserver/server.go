@@ -60,6 +60,7 @@ func Newer(s BackendServer, w http.ResponseWriter, r *http.Request) {
 
 func Send(s BackendServer, w http.ResponseWriter, r *http.Request) {
 
+	s.Debugf("Receiving %s  %s \n", r.FormValue("n"), r.FormValue("v"))
 	name := r.FormValue("n")
 	version, _ := gpk.ParseVersion(r.FormValue("v"))
 	if name == "" {
@@ -67,6 +68,7 @@ func Send(s BackendServer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pr := gpk.NewProjectID(name, version)
+	
 	s.Send(pr, w, r)
 	return
 }
