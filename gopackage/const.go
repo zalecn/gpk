@@ -6,12 +6,12 @@
 package gopackage
 
 import (
+"net/url"
 )
 
 const (
 	Cmd               = "gpk"
 	GopackageFile     = ".gpk"
-	GopackageCentral  = "gpk.ericaro.net"
 	GopackageVersion  = "0.0.0.1"
 	DefaultRepository = ".gpkrepository"
 	Release           = "Release"

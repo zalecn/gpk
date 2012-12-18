@@ -6,19 +6,25 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"net/url"
 	"path/filepath"
 )
 
 const (
 	Cmd               = "gpk"
-	GopackageCentral  = "gpk.ericaro.net"
-	GopackageVersion  = "0.0.0.1" //?
+	GopackageVersion  = "0.0.1" //?
 	DefaultRepository = ".gpkrepository"
+)
+
+var (
+	GopackageCentral,_  = url.Parse("http://gpk.ericaro.net")
 )
 
 // here are gopackage flags not specific ones
 
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
+var localRepositoryFlag *string = flag.String("local", DefaultRepository, "path to the local repository to be used by default.")
+
 
 var Commands map[string]*Command = make(map[string]*Command)
 var AllCommands []*Command = make([]*Command, 0)
@@ -73,7 +79,10 @@ func main() {
 
 func NewDefaultRepository() (r *LocalRepository, err error) {
 	u, _ := user.Current()
-	return NewLocalRepository(filepath.Join(u.HomeDir, DefaultRepository))
+	path := filepath.Join(u.HomeDir, *localRepositoryFlag)
+	path = filepath.Clean(path)
+	fmt.Printf("local repo = %s\n", path)
+	return NewLocalRepository(path)
 }
 
 func handleError(err error) {

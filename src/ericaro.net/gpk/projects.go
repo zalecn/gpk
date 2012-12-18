@@ -88,6 +88,9 @@ func (p Package) Write() (err error) {
 func (p *Project) WorkingDir() string {
 	return p.workingDir
 }
+func (p *Package) InstallDir() string {
+	return p.self.workingDir
+}
 func (p *Project) Name() string {
 	return p.name
 }
@@ -168,23 +171,27 @@ func (p *Package) ID() ProjectID {
 
 //ReadProjectTar reads the .gopackage file within the tar in memory. It does not set the Root
 func ReadPackageInPackage(in io.Reader) (p *Package, err error) {
+	//fmt.Printf("Parsing in memory package\n")
 	gz, err := gzip.NewReader(in)
 	if err != nil {
 		return
 	}
-	tr := tar.NewReader(in)
+	tr := tar.NewReader(gz)
 	defer gz.Close()
+	
 	for {
 		hdr, err := tr.Next()
 		if err != nil {
 			if err == io.EOF {
 				err = errors.New(fmt.Sprintf("Invalid package format, %v is missing", GpkFile))
 			}
+			break
 		}
+		//fmt.Printf("hdr %v\n", hdr )
 		if hdr.Name == GpkFile {
 			p = &Package{}
 			err = DecodePackage(tr, p)
-			break
+			return p, err
 		}
 	}
 	return
@@ -193,9 +200,12 @@ func ReadPackageInPackage(in io.Reader) (p *Package, err error) {
 //Untar reads the .gopackage file within the tar in memory. It does not set the Root
 func (p *Package) Unpack(in io.Reader) (err error) {
 	gz, err := gzip.NewReader(in)
-	tr := tar.NewReader(in)
+	if err != nil {return}
+	
 	defer gz.Close()
+	tr := tar.NewReader(gz)
 	dst := p.self.workingDir
+	fmt.Printf("unpacking to %s\n", dst)
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
 	for {
 		hdr, err := tr.Next()
@@ -203,12 +213,16 @@ func (p *Package) Unpack(in io.Reader) (err error) {
 			return nil
 		}
 		if err != nil {
-			break
+			fmt.Printf("error in tar %s\n", err)
+			return err
 		}
 		// make the target file
 		ndst := filepath.Join(dst, hdr.Name)
+		os.MkdirAll(path.Dir(ndst), os.ModeDir|os.ModePerm) // mkdir -p
+		//fmt.Printf("%s\n", ndst)
 		df, err := os.Create(ndst)
 		if err != nil {
+		fmt.Printf("error unpacking %v\n", err)
 			break
 		}
 		io.Copy(df, tr)
@@ -223,9 +237,10 @@ func (p *Package) Pack(in io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	defer gz.Close()
 
 	tw := tar.NewWriter(gz)
+	defer gz.Close()
+	defer tw.Close()
 
 	//prepare recursive handlers
 	dirHandler := func(ldst, lsrc string) (err error) {
@@ -235,13 +250,14 @@ func (p *Package) Pack(in io.Writer) (err error) {
 		err = TarFile(ldst, lsrc, tw)
 		return
 	}
-	walkDir("/", filepath.Join(p.self.workingDir, "src"), dirHandler, fileHandler)
+	walkDir("src", filepath.Join(p.self.workingDir, "src"), dirHandler, fileHandler)
 	// copy the package .gpk
-	TarFile(filepath.Join("/", GpkFile), filepath.Join(p.self.workingDir, GpkFile), tw)
+	TarFile(filepath.Join("", GpkFile), filepath.Join(p.self.workingDir, GpkFile), tw)
 	// or rewrite it (and edit it on the fly ?
 	//	buf := new(bytes.Buffer)
 	//	json.NewEncoder(buf).Encode(p)
 	//	TarBuff(filepath.Join("/", GpkFile), buf, tw)
+	
 	return
 }
 

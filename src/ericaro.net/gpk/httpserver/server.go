@@ -37,6 +37,7 @@ func Receive(s BackendServer, w http.ResponseWriter, r *http.Request) {
 
 	err := s.Receive(pr, timestamp, w, r) // create and fill the blob
 	if err != nil {
+		s.Debugf("Error %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

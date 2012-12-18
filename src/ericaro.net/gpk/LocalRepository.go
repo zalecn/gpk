@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"net/url"
 )
 
 const (
@@ -19,8 +20,27 @@ const (
 type RemoteRepository interface {
 	CheckPackageUpdate(p *Package) (newer bool, err error)
 	ReadPackage(p ProjectID) (r io.Reader, err error)
+	UploadPackage(p *Package) (err error)
 	// TODO provide some "reader" from the remote, so local can copy it down
 }
+
+type RemoteConstructor func(u url.URL) RemoteRepository
+
+var RemoteRepositoryFactory map[string]RemoteConstructor // factory
+func RegisterRemoteRepositoryFactory(urlprotocol string , xtor RemoteConstructor){
+	if RemoteRepositoryFactory == nil {
+		RemoteRepositoryFactory = make(map[string]RemoteConstructor)
+	}
+	if _,ok := RemoteRepositoryFactory[urlprotocol]; ok {
+		panic("double remote repository definition for "+urlprotocol+"\n")
+	}
+	RemoteRepositoryFactory[urlprotocol] = xtor
+}
+
+func NewRemoteRepository(u url.URL) RemoteRepository {
+	return RemoteRepositoryFactory[u.Scheme](u)
+}
+
 
 type LocalRepository struct {
 	root string // absolute path to the repo, this must be a filesystem writable path.
@@ -147,19 +167,25 @@ func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID) 
 }
 
 func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
+	fmt.Printf("installing ...\n")
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader) // download the tar.gz
 	//reader.Close()
 	if err != nil {
 		return
 	}
-
-	prj, err = ReadPackageInPackage(buf) // foretell the package object from within a buffer
+	mem := bytes.NewReader(buf.Bytes())
+	prj, err = ReadPackageInPackage(mem) // foretell the package object from within a buffer
+	fmt.Printf("                %v\n", prj)
 	if err != nil {
 		return
 	}
 	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String())
-	prj.Unpack(buf) // now I know the target I can unpack it.
+	fmt.Printf("                              TO %v\n", prj.self.workingDir)
+	
+	mem = bytes.NewReader(buf.Bytes())
+	err = prj.Unpack(mem) // now I know the target I can unpack it.
+	
 	return
 
 }
