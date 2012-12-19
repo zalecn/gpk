@@ -4,9 +4,9 @@ import (
 	. "ericaro.net/gpk"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/user"
-	"net/url"
 	"path/filepath"
 )
 
@@ -17,14 +17,13 @@ const (
 )
 
 var (
-	GopackageCentral,_  = url.Parse("http://gpk.ericaro.net")
+	GopackageCentral, _ = url.Parse("http://gpk.ericaro.net")
 )
 
 // here are gopackage flags not specific ones
 
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
 var localRepositoryFlag *string = flag.String("local", DefaultRepository, "path to the local repository to be used by default.")
-
 
 var Commands map[string]*Command = make(map[string]*Command)
 var AllCommands []*Command = make([]*Command, 0)
@@ -35,6 +34,55 @@ func Reg(commands ...*Command) {
 		Commands[c.Alias] = c
 	}
 	AllCommands = append(AllCommands, commands...)
+}
+
+func init() {
+	Reg(
+		&Help,
+	)
+}
+
+var Help = Command{
+	Name:      `help`,
+	Alias:     `h`,
+	UsageLine: `<command>`,
+	Short:     `Display more advanced help for the given command`,
+	Long:      `Display more advanced help for the given command`,
+	call:      func(c *Command) { c.Help() },
+}
+
+func (c *Command) Help() {
+
+	if len(c.Flag.Args()) == 0 {
+		PrintGlobalUsage()
+		return
+	}
+	cmdName := c.Flag.Arg(0)
+	cmd, ok := Commands[cmdName]
+	if !ok {
+		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
+		PrintGlobalUsage()
+		return
+	}
+	
+	fmt.Printf( //TODO beautify with console colors
+`gpk %s %s
+
+%s
+
+%s
+`, cmd.Name, cmd.UsageLine, cmd.Short, cmd.Long )
+
+}
+
+func PrintGlobalUsage() {
+	fmt.Printf("%s [general options] <alias|name> [options]  \n", Cmd)
+	fmt.Printf("  %-8s %-10s %s\n", "alias", "name", "description")
+	fmt.Printf("  -------------------\n")
+
+	for _, c := range AllCommands {
+		fmt.Printf("  %-8s %-10s %s\n", c.Alias, c.Name, c.Short)
+	}
 }
 
 func main() {
@@ -49,21 +97,15 @@ func main() {
 	cmd, ok := Commands[cmdName]
 	if !ok {
 		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
+		PrintGlobalUsage()
 
-		fmt.Printf("%s [general options] <alias|name> [options]  \n", Cmd)
-		fmt.Printf("  %-8s %-10s %s\n", "alias", "name", "description")
-		fmt.Printf("  -------------------\n")
-
-		for _, c := range AllCommands {
-			fmt.Printf("  %-8s %-10s %s\n", c.Alias, c.Name, c.Short)
-		}
 		return
 	}
 
 	r, err := NewDefaultRepository()
-	
+
 	handleError(err)
-	
+
 	cmd.Repository = r
 
 	if cmd.RequireProject {

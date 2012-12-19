@@ -92,6 +92,7 @@ func (r *HttpRemoteRepository) CheckPackageUpdate(p *Package) (newer bool, err e
 // the optional parameter snapshot, and version must be set
 func (r *HttpRemoteRepository) UploadPackage(p *Package) (err error) { // TODO add a token authentication here
 	// package it in memory
+	
 	buf := new(bytes.Buffer)
 	p.Pack(buf)
 	fmt.Printf("uploading %d\n", buf.Len())
