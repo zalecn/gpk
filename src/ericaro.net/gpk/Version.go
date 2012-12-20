@@ -41,6 +41,10 @@ func (v Version) String() (version string) {
 	return
 }
 
+func (v Version) IsSnapshot() bool {
+	return v.major == 0 && v.minor == 0 && v.patch == 0
+}
+
 func atoi(s string) uint32 {
 	i, _ := strconv.ParseUint(s, 10, 8)
 	return uint32(i)

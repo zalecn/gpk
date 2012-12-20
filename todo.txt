@@ -1,34 +1,44 @@
 
+name is gopak
+
 Use Cases
 =========
 
+releasing a simple project:
+	1/ fix dependencies (use a release version everywhere)
+	2/ git commit && tag && push tag && gpk push, mark it in the stage file
+
+idea: use a kind of "defer" in the staging script so that it will be executed when closing the staging
 
 
+releasing a root project:
+create a stage ( in local repo, and/or git and/or gpk)
+use gpk list to get the list of project to be released first (and added to the stage file, to remember what to do )
+for each one (in the order given by the list): release it as a simple project
+(the stage file is used to autofix the dependencies)
 
-Releasing a non root  project.
-	stage it to some repo ( := stage it )
-		once everything has been validated => go to the stagging repo and "promote" to another one ( =>TODO promote repo)
-	promote the stage repo
-
-release a root project: (ie a final top level one, ie one containing binaries the only "real" output):
-	stage it
-		"build the binaries" on every platforms, and push them to the same staging repo ( =>TODO build binaries command)
-	promote the stage repo
+same as for the simple project expect that there is a 3rd step:
+	3/ gpk build the binaries (and push them)
 
 
+at the end, promote the stage is all about:
+	merge cloned git repo into main, 
+	promote gpk staging repo
+	close  the stage file (maybe run the defer commands ?)
 
-releasing a complex project (several snapshot dependencies ):
-	computes the staging order
-	stage dependencies (it creates a local staging file, that will be reused) 
-		this includes updating the project's dependencies to the staged versions (=>TODO gpk stage apply part of stage command)
-	stage the root project
-	build binaries on every platform
-	promote the stage repo
-
-
-
-
-
-
-issue: what if I have a lot of project with a same snapshot dependencies (like, utils for instance) I would need to update the dependencies all in one.
-For that I need to store the real working dir into the packaged project ( so that I can try to really interconnect projects )
+	
+	therefore here are the commands: 
+	gpk dependency-fix (require a staging file, and tries to auto fix all dependencies)
+	gpk commit-install : git commit tag version, 	gpk install version => gpk commit-install version (new command that encapsulate git commit -m )
+	gpk push-push = gpk push version & git push tag => new command gpk repush version (encapsulate git push tag, and gpk push tag)
+	the push push is defered for after the staging 
+	
+	gpk stage init (create a staging file or fail)
+	gpk stage status (where am i, what to do next)
+	gpk stage close (run defered command and delete the file, confirm if not empty )
+	
+	
+	
+	
+	
+	

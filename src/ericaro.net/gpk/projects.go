@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -24,11 +23,11 @@ var (
 		Scheme: "http",
 		Host:   "gpk.ericaro.net",
 	}
-	Central  RemoteRepository
+	Central RemoteRepository
 )
 
-func init(){
- Central = NewRemoteRepository("central", CentralUrl  )
+func init() {
+	Central = NewRemoteRepository("central", CentralUrl)
 }
 
 type ProjectID struct {
@@ -40,7 +39,6 @@ type Project struct {
 	workingDir   string      // transient workding directory aboslute path
 	name         string      // package name
 	dependencies []ProjectID // contains the current project's dependencies
-	remotes      []RemoteRepository
 	// TO be added build time , and test dependencies
 }
 type Package struct {
@@ -76,9 +74,7 @@ func ReadPackageFile(gpkPath string) (p *Package, err error) {
 
 //ReadProjectFile local info from the specified gopackage file
 func ReadProjectFile(gpkPath string) (p *Project, err error) {
-	p = &Project{
-		remotes: []RemoteRepository{Central},
-	}
+	p = &Project{}
 	f, err := os.Open(gpkPath)
 	if err != nil {
 		return
@@ -96,7 +92,7 @@ func (p *Package) Timestamp() time.Time {
 //Write package  info to where it belongs (package holds working dir info)
 func (p Package) Write() (err error) {
 	dst := filepath.Join(p.self.workingDir, GpkFile)
-//	fmt.Printf("writing package to %s\n", dst)
+	//	fmt.Printf("writing package to %s\n", dst)
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -115,51 +111,18 @@ func (p *Package) InstallDir() string {
 func (p *Project) Name() string {
 	return p.name
 }
+func (p *Package) Name() string {
+	return p.self.name
+}
+func (p *Package) Version() Version {
+	return p.version
+}
 
 func (p *ProjectID) Name() string {
 	return p.name
 }
 func (p *ProjectID) Version() Version {
 	return p.version
-}
-func (p *Project) Remotes() []RemoteRepository {
-	return p.remotes
-}
-
-func (p *Project) Remote(name string) (remote RemoteRepository, err error) {
-	for _, r := range p.remotes {
-		if strings.EqualFold(name, r.Name()) {
-			return r, nil
-		}
-	}
-	return nil, errors.New("Missing remote")
-}
-
-func (p *Project) RemoteAdd(remote RemoteRepository) (err error) {
-	for _, r := range p.remotes {
-		if strings.EqualFold(remote.Name(), r.Name()) {
-			return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
-		}
-	}
-	p.remotes = append(p.remotes, remote)
-	return
-}
-
-func (p *Project) RemoteRemove(name string) (err error) {
-	for i, r := range p.remotes {
-		if strings.EqualFold(name, r.Name()) {
-			tmp := make([]RemoteRepository, 0, len(p.remotes))
-			if i > 0 {
-				tmp = append(tmp, p.remotes[0:i]...)
-			}
-			if i+1 < len(p.remotes) {
-				tmp = append(tmp, p.remotes[i+1:]...)
-			}
-			p.remotes = tmp
-			return
-		}
-	}
-	return
 }
 
 func (p *Project) SetWorkingDir(pwd string) {
@@ -336,7 +299,6 @@ func (p *Package) Pack(in io.Writer) (err error) {
 type ProjectFile struct {
 	Name         string
 	Dependencies []ProjectIDFile
-	Remotes      []RemoteFile
 }
 type PackageFile struct {
 	Self      ProjectFile
@@ -347,6 +309,11 @@ type PackageFile struct {
 type ProjectIDFile struct {
 	Name, Version string
 }
+
+type LocalRepositoryFile struct {
+	Remotes []RemoteFile
+}
+
 type RemoteFile struct {
 	Name, Url string
 }
@@ -384,6 +351,24 @@ func DecodeProject(r io.Reader, p *Project) (err error) {
 	return
 }
 
+
+func EncodeLocalRepository(w io.Writer, p LocalRepository) (err error) {
+	pf := EncodeLocalRepositoryFile(p)
+	err = json.NewEncoder(w).Encode(pf)
+	return
+
+}
+
+func DecodeLocalRepository(r io.Reader, p *LocalRepository) (err error) {
+	pf := new(LocalRepositoryFile )
+	err = json.NewDecoder(r).Decode(pf)
+	if err != nil {
+		return
+	}
+	DecodeLocalRepositoryFile(*pf, p)
+	return
+}
+
 func DecodeRemoteFile(rf RemoteFile) RemoteRepository {
 	u, err := url.Parse(rf.Url)
 	if err != nil {
@@ -400,16 +385,19 @@ func EncodeRemoteFile(r RemoteRepository) *RemoteFile {
 	}
 }
 
+func DecodeLocalRepositoryFile(pf LocalRepositoryFile, p *LocalRepository) {
+	for _, d := range pf.Remotes {
+		p.RemoteAdd(DecodeRemoteFile(d))
+	}
+}
 func DecodeProjectFile(pf ProjectFile, p *Project) {
 	p.name = pf.Name
 	for _, d := range pf.Dependencies {
 		v, _ := ParseVersion(d.Version)
 		p.AppendDependency(NewProjectID(d.Name, v))
 	}
-	for _, d := range pf.Remotes {
-		p.RemoteAdd(DecodeRemoteFile(d))
-	}
 }
+
 func DecodePackageFile(pf PackageFile, p *Package) {
 	prj := new(Project)
 	DecodeProjectFile(pf.Self, prj)
@@ -425,7 +413,6 @@ func EncodePackageFile(p Package) *PackageFile {
 		Timestamp: p.timestamp,
 		Version:   p.version.String(),
 	}
-
 }
 
 func EncodeProjectIDFile(p ProjectID) *ProjectIDFile {
@@ -440,14 +427,18 @@ func EncodeProjectFile(p Project) *ProjectFile {
 		dep = append(dep, *EncodeProjectIDFile(d))
 	}
 
-	rep := make([]RemoteFile, 0, len(p.remotes))
-	for _, r := range p.remotes {
-		rep = append(rep, *EncodeRemoteFile(r))
-	}
-
 	return &ProjectFile{
 		Name:         p.name,
 		Dependencies: dep,
-		Remotes:      rep,
+	}
+}
+func EncodeLocalRepositoryFile(p LocalRepository) *LocalRepositoryFile {
+	dep := make([]RemoteFile, 0, len(p.remotes))
+	for _, d := range p.remotes {
+		dep = append(dep, *EncodeRemoteFile(d) )
+	}
+
+	return &LocalRepositoryFile{
+		Remotes: dep,
 	}
 }

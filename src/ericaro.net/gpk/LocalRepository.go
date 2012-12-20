@@ -44,6 +44,18 @@ func NewRemoteRepository(name string, u url.URL) RemoteRepository {
 
 type LocalRepository struct {
 	root string // absolute path to the repo, this must be a filesystem writable path.
+	remotes []RemoteRepository
+}
+
+func (p LocalRepository) Write() (err error) {
+	dst := filepath.Join(p.root, GpkFile)
+	f, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	err = EncodeLocalRepository(f, p)
+	return err
 }
 
 // features:
@@ -61,9 +73,59 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 
 	r = &LocalRepository{
 		root: root,
+		remotes : []RemoteRepository{Central},
+	}
+	
+	f, err2 := os.Open(filepath.Join(root, GpkFile))
+	if err2 != nil {
+		return
+	}
+	defer f.Close()
+	err = DecodeLocalRepository(f, r)
+	return
+}
+
+
+func (r *LocalRepository) Remotes() []RemoteRepository {
+	return r.remotes
+}
+
+func (r *LocalRepository) Remote(name string) (remote RemoteRepository, err error) {
+	for _, re := range r.remotes {
+		if strings.EqualFold(name, re.Name()) {
+			return re, nil
+		}
+	}
+	return nil, errors.New("Missing remote")
+}
+
+func (p *LocalRepository) RemoteAdd(remote RemoteRepository) (err error) {
+	for _, r := range p.remotes {
+		if strings.EqualFold(remote.Name(), r.Name()) {
+			return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
+		}
+	}
+	p.remotes = append(p.remotes, remote)
+	return
+}
+
+func (p *LocalRepository) RemoteRemove(name string) (err error) {
+	for i, r := range p.remotes {
+		if strings.EqualFold(name, r.Name()) {
+			tmp := make([]RemoteRepository, 0, len(p.remotes))
+			if i > 0 {
+				tmp = append(tmp, p.remotes[0:i]...)
+			}
+			if i+1 < len(p.remotes) {
+				tmp = append(tmp, p.remotes[i+1:]...)
+			}
+			p.remotes = tmp
+			return
+		}
 	}
 	return
 }
+
 
 func (r *LocalRepository) FindPackage(p ProjectID) (prj *Package, err error) {
 	relative := p.Path()
@@ -115,20 +177,17 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 //FindProjectDependencies lookup recursively for all project dependencies
 func (r *LocalRepository) ResolveDependencies(p *Project, offline, update bool) (dependencies []*Package, err error) {
 	depMap := make(map[ProjectID]*Package)
-	remotes := p.Remotes()
-	err = r.findProjectDependencies(p, remotes, depMap, offline, update)
+	dependencies = make([]*Package, 0, 10)
+	
+	err = r.findProjectDependencies(p, r.remotes, depMap,&dependencies, offline, update)
 	if err != nil {
 		return
-	}
-	dependencies = make([]*Package, 0, len(depMap))
-	for _, v := range depMap {
-		dependencies = append(dependencies, v)
 	}
 	return
 }
 
 //findProjectDependencies private recursive version
-func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRepository, dependencies map[ProjectID]*Package, offline, update bool) (err error) {
+func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRepository, dependencies map[ProjectID]*Package, dependencyList *[]*Package, offline, update bool) (err error) {
 	for _, d := range p.dependencies {
 		if dependencies[d] == nil { // it's a new dependencies
 			prj, err := r.FindPackage(d)
@@ -167,7 +226,8 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRe
 				return errors.New(fmt.Sprintf("Missing dependency: %v\n", d))
 			}
 			dependencies[d] = prj
-			err = r.findProjectDependencies(&prj.self, remotes, dependencies, offline, update)
+			*dependencyList = append(*dependencyList, prj)
+			err = r.findProjectDependencies(&prj.self, remotes, dependencies, dependencyList,  offline, update)
 			if err != nil {
 				return err
 			}

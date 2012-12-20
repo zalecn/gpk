@@ -3,8 +3,8 @@ package main
 import (
 	. "ericaro.net/gpk"
 	"fmt"
-	"os"
 	"net/url"
+	"os"
 )
 
 func init() {
@@ -12,6 +12,7 @@ func init() {
 		&Status,
 		&Add,
 		&Remove,
+		&List,
 		&AddRemote,
 		&RemoveRemote,
 		&Init,
@@ -45,6 +46,15 @@ var Add = Command{
 	call:           func(c *Command) { c.Add() },
 	RequireProject: true,
 }
+var List = Command{
+	Name:           `list`,
+	Alias:          `l`,
+	UsageLine:      ``,
+	Short:          `List Dependencies.`,
+	Long:           `List all dependencies in a dependency order. Meaning that for any given package, all its dependencies are listed before it.`,
+	call:           func(c *Command) { c.List() },
+	RequireProject: true,
+}
 var AddRemote = Command{
 	Name:      `add-remote`,
 	Alias:     `r+`,
@@ -53,7 +63,7 @@ var AddRemote = Command{
 	Long: `Remote server can be used to publish or share code snapshots  
 	`,
 	call:           func(c *Command) { c.AddRemote() },
-	RequireProject: true,
+	RequireProject: false,
 }
 var Remove = Command{
 	Name:      `rem`,
@@ -80,7 +90,7 @@ var RemoveRemote = Command{
 	Short:          `Remove remote synchronization server`,
 	Long:           ``,
 	call:           func(c *Command) { c.RemoveRemote() },
-	RequireProject: true,
+	RequireProject: false,
 }
 
 var Init = Command{
@@ -104,7 +114,7 @@ func (c *Command) Status() {
 	}
 
 	fmt.Printf("\n    Synchronizes with\n")
-	for _, r := range c.Project.Remotes() {
+	for _, r := range c.Repository.Remotes() {
 		u := r.Path()
 		fmt.Printf("        %-40s %v\n", r.Name(), u.String())
 	}
@@ -146,10 +156,30 @@ func (c *Command) Add() {
 	c.Project.Write()
 }
 
+var listSnapshotOnlyFlag *bool = List.Flag.Bool("s", false, "snapshot only. List only snapshot dependencies")
+
+func (c *Command) List() {
+	if *listSnapshotOnlyFlag {
+		TitleStyle.Printf("Snaphost Dependencies for %s:\n", c.Project.Name())
+	} else {
+		TitleStyle.Printf("All Dependencies for %s:\n", c.Project.Name())
+	}
+	dependencies, err := c.Repository.ResolveDependencies(c.Project, true, false)
+	if err != nil {
+		ErrorStyle.Printf("Cannot resolve dependencies. %s\n", err)
+	}
+	all := !*listSnapshotOnlyFlag
+	for _, d := range dependencies {
+		if all || d.Version().IsSnapshot() {
+			fmt.Printf("        %-40s %s\n", d.Name(), d.Version().String())
+		}
+	}
+}
+
 func (c *Command) AddRemote() {
 
 	if len(c.Flag.Args()) != 2 {
-		c.Flag.Usage()
+		fmt.Printf("Illegal arguments\n")
 		return
 	}
 	name, remote := c.Flag.Arg(0), c.Flag.Arg(1)
@@ -158,8 +188,8 @@ func (c *Command) AddRemote() {
 		ErrorStyle.Printf("Invalid URL passed as a remote Repository.\n    Caused by %s\n", err)
 		return
 	}
-	c.Project.RemoteAdd(NewRemoteRepository(name, *u))
-	c.Project.Write()
+	c.Repository.RemoteAdd(NewRemoteRepository(name, *u))
+	c.Repository.Write()
 }
 
 func (c *Command) Remove() {
@@ -183,7 +213,7 @@ func (c *Command) RemoveRemote() {
 		return
 	}
 	for _, name := range c.Flag.Args() {
-		c.Project.RemoteRemove(name)
+		c.Repository.RemoteRemove(name)
 	}
-	c.Project.Write()
+	c.Repository.Write()
 }

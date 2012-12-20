@@ -64,12 +64,12 @@ func (c *Command) Serve() {
 func (c *Command) Push() {
 
 	rem := c.Flag.Arg(0)
-	remote, err := c.Project.Remote(rem)
+	remote, err := c.Repository.Remote(rem)
 	if err != nil {
 		ErrorStyle.Printf("Unknown remote %s.\n", rem)
 
 		fmt.Printf("Available remotes are:\n")
-		for _, r := range c.Project.Remotes() {
+		for _, r := range c.Repository.Remotes() {
 			u := r.Path()
 			fmt.Printf("    %-40s %s\n", r.Name(), u.String())
 		}
