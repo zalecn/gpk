@@ -4,17 +4,17 @@ import (
 	"appengine"
 	"appengine/blobstore"
 	"appengine/datastore"
+	"bytes"
 	"ericaro.net/gpk"
 	"ericaro.net/gpk/httpserver"
 	"io"
 	"net/http"
 	"time"
-	"bytes"
 )
 
 //a Package is a pure, in-memory representation of a Package
 type GaePackage struct {
-	Pack        gpk.Package
+	Timestamp   time.Time
 	ContentBlob appengine.BlobKey // tar.gz of the content
 
 }
@@ -22,7 +22,6 @@ type GaePackage struct {
 type GaeBackendServer struct {
 	appengine.Context
 }
-
 
 func gaereceive(w http.ResponseWriter, r *http.Request) {
 	be := &GaeBackendServer{
@@ -58,24 +57,37 @@ func (s *GaeBackendServer) Receive(id gpk.ProjectID, timestamp time.Time, w http
 	}
 
 	buf := new(bytes.Buffer)
-	if err != nil {	return}
+	if err != nil {
+		return
+	}
 	_, err = io.Copy(buf, r.Body) // store it in memory
-	if err != nil {	return}
+	if err != nil {
+		return
+	}
 
 	pack, err := gpk.ReadPackageInPackage(buf)
-	if err != nil {	return}
+	if err != nil {
+		return
+	}
 	_, err = io.Copy(writer, buf) // write the blob back
-	if err != nil {	return}
-	
+	if err != nil {
+		return
+	}
+
 	err = writer.Close()
-	if err != nil {	return}
-	
+	if err != nil {
+		return
+	}
+
 	blobkey, err := writer.Key()
-	if err != nil {	return}
-	
+	if err != nil {
+		return
+	}
+
 	// build the entity
+
 	p := &GaePackage{
-		Pack:        *pack,
+		Timestamp : pack.Timestamp(),
 		ContentBlob: blobkey,
 	}
 
@@ -88,7 +100,7 @@ func (s *GaeBackendServer) Send(id gpk.ProjectID, w http.ResponseWriter, r *http
 	c := s.Context
 	p := new(GaePackage)
 	err := datastore.Get(c, datastore.NewKey(c, "GaePackage", id.ID(), 0, nil), p)
-	
+
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -102,12 +114,11 @@ func (s *GaeBackendServer) Newer(id gpk.ProjectID, timestamp time.Time, w http.R
 	p := new(GaePackage)
 	err := datastore.Get(c, datastore.NewKey(c, "GaePackage", id.ID(), 0, nil), p)
 
-	if err != nil || p == nil || !p.Pack.Timestamp().After(timestamp) {
+	if err != nil || p == nil || !p.Timestamp.After(timestamp) {
 		http.NotFound(w, r)
 		return
 	}
 }
-
 
 func (s *GaeBackendServer) DeleteBlob(k appengine.BlobKey) (err error) {
 	return blobstore.Delete(s.Context, k)

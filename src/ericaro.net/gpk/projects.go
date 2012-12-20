@@ -7,11 +7,29 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
+
+const (
+	GpkFile = ".gpk"
+)
+
+var (
+	CentralUrl = url.URL{
+		Scheme: "http",
+		Host:   "gpk.ericaro.net",
+	}
+	Central  RemoteRepository
+)
+
+func init(){
+ Central = NewRemoteRepository("central", CentralUrl  )
+}
 
 type ProjectID struct {
 	name    string // any valid package name
@@ -22,6 +40,7 @@ type Project struct {
 	workingDir   string      // transient workding directory aboslute path
 	name         string      // package name
 	dependencies []ProjectID // contains the current project's dependencies
+	remotes      []RemoteRepository
 	// TO be added build time , and test dependencies
 }
 type Package struct {
@@ -57,7 +76,9 @@ func ReadPackageFile(gpkPath string) (p *Package, err error) {
 
 //ReadProjectFile local info from the specified gopackage file
 func ReadProjectFile(gpkPath string) (p *Project, err error) {
-	p = &Project{}
+	p = &Project{
+		remotes: []RemoteRepository{Central},
+	}
 	f, err := os.Open(gpkPath)
 	if err != nil {
 		return
@@ -75,7 +96,7 @@ func (p *Package) Timestamp() time.Time {
 //Write package  info to where it belongs (package holds working dir info)
 func (p Package) Write() (err error) {
 	dst := filepath.Join(p.self.workingDir, GpkFile)
-	fmt.Printf("writing package to %s\n", dst)
+//	fmt.Printf("writing package to %s\n", dst)
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -94,11 +115,62 @@ func (p *Package) InstallDir() string {
 func (p *Project) Name() string {
 	return p.name
 }
+
+func (p *ProjectID) Name() string {
+	return p.name
+}
+func (p *ProjectID) Version() Version {
+	return p.version
+}
+func (p *Project) Remotes() []RemoteRepository {
+	return p.remotes
+}
+
+func (p *Project) Remote(name string) (remote RemoteRepository, err error) {
+	for _, r := range p.remotes {
+		if strings.EqualFold(name, r.Name()) {
+			return r, nil
+		}
+	}
+	return nil, errors.New("Missing remote")
+}
+
+func (p *Project) RemoteAdd(remote RemoteRepository) (err error) {
+	for _, r := range p.remotes {
+		if strings.EqualFold(remote.Name(), r.Name()) {
+			return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
+		}
+	}
+	p.remotes = append(p.remotes, remote)
+	return
+}
+
+func (p *Project) RemoteRemove(name string) (err error) {
+	for i, r := range p.remotes {
+		if strings.EqualFold(name, r.Name()) {
+			tmp := make([]RemoteRepository, 0, len(p.remotes))
+			if i > 0 {
+				tmp = append(tmp, p.remotes[0:i]...)
+			}
+			if i+1 < len(p.remotes) {
+				tmp = append(tmp, p.remotes[i+1:]...)
+			}
+			p.remotes = tmp
+			return
+		}
+	}
+	return
+}
+
 func (p *Project) SetWorkingDir(pwd string) {
 	p.workingDir = pwd
 }
 func (p *Project) SetName(name string) {
 	p.name = name
+}
+
+func (p *Project) Dependencies() []ProjectID {
+	return p.dependencies[:]
 }
 
 func (p *Project) AppendDependency(ref ...ProjectID) {
@@ -137,7 +209,7 @@ func (p Project) Write() (err error) {
 		return err
 	}
 	defer f.Close()
-	err = EncodeProject(f,p)
+	err = EncodeProject(f, p)
 	return err
 }
 
@@ -178,7 +250,7 @@ func ReadPackageInPackage(in io.Reader) (p *Package, err error) {
 	}
 	tr := tar.NewReader(gz)
 	defer gz.Close()
-	
+
 	for {
 		hdr, err := tr.Next()
 		if err != nil {
@@ -200,12 +272,14 @@ func ReadPackageInPackage(in io.Reader) (p *Package, err error) {
 //Untar reads the .gopackage file within the tar in memory. It does not set the Root
 func (p *Package) Unpack(in io.Reader) (err error) {
 	gz, err := gzip.NewReader(in)
-	if err != nil {return}
-	
+	if err != nil {
+		return
+	}
+
 	defer gz.Close()
 	tr := tar.NewReader(gz)
 	dst := p.self.workingDir
-	fmt.Printf("unpacking to %s\n", dst)
+	//fmt.Printf("unpacking to %s\n", dst)
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
 	for {
 		hdr, err := tr.Next()
@@ -213,7 +287,6 @@ func (p *Package) Unpack(in io.Reader) (err error) {
 			return nil
 		}
 		if err != nil {
-			fmt.Printf("error in tar %s\n", err)
 			return err
 		}
 		// make the target file
@@ -222,7 +295,6 @@ func (p *Package) Unpack(in io.Reader) (err error) {
 		//fmt.Printf("%s\n", ndst)
 		df, err := os.Create(ndst)
 		if err != nil {
-		fmt.Printf("error unpacking %v\n", err)
 			break
 		}
 		io.Copy(df, tr)
@@ -257,101 +329,125 @@ func (p *Package) Pack(in io.Writer) (err error) {
 	//	buf := new(bytes.Buffer)
 	//	json.NewEncoder(buf).Encode(p)
 	//	TarBuff(filepath.Join("/", GpkFile), buf, tw)
-	
+
 	return
 }
 
-type projectFile struct {
-	Name string
-	Dependencies []projectIDFile
+type ProjectFile struct {
+	Name         string
+	Dependencies []ProjectIDFile
+	Remotes      []RemoteFile
 }
-type packageFile struct {
-	Self      projectFile
+type PackageFile struct {
+	Self      ProjectFile
 	Version   string
 	Timestamp time.Time
 }
 
-type projectIDFile struct {
+type ProjectIDFile struct {
 	Name, Version string
 }
-
+type RemoteFile struct {
+	Name, Url string
+}
 
 func DecodePackage(r io.Reader, p *Package) (err error) {
-	pf := new(packageFile)
+	pf := new(PackageFile)
 	err = json.NewDecoder(r).Decode(pf)
 	if err != nil {
 		return
 	}
-	decodePackageFile(*pf, p)
+	DecodePackageFile(*pf, p)
 	return
 }
 func EncodePackage(w io.Writer, p Package) (err error) {
-	pf := encodePackageFile(p)
+	pf := EncodePackageFile(p)
 	err = json.NewEncoder(w).Encode(pf)
-	return 
-	
+	return
+
 }
 
-
-
 func EncodeProject(w io.Writer, p Project) (err error) {
-	pf := encodeProjectFile(p)
+	pf := EncodeProjectFile(p)
 	err = json.NewEncoder(w).Encode(pf)
-	return 
-	
+	return
+
 }
 
 func DecodeProject(r io.Reader, p *Project) (err error) {
-	pf := new(projectFile)
+	pf := new(ProjectFile)
 	err = json.NewDecoder(r).Decode(pf)
 	if err != nil {
 		return
 	}
-	decodeProjectFile(*pf, p)
+	DecodeProjectFile(*pf, p)
 	return
 }
 
-func decodeProjectFile(pf projectFile, p *Project)  {
-	p.name = pf.Name
-	for _,d := range pf.Dependencies {
-		v,_ := ParseVersion(d.Version)
-		p.AppendDependency( NewProjectID( d.Name, v ) )
+func DecodeRemoteFile(rf RemoteFile) RemoteRepository {
+	u, err := url.Parse(rf.Url)
+	if err != nil {
+		panic(err)
+	}
+	return NewRemoteRepository(rf.Name, *u)
+}
+
+func EncodeRemoteFile(r RemoteRepository) *RemoteFile {
+	u := r.Path()
+	return &RemoteFile{
+		Name: r.Name(),
+		Url:  u.String(),
 	}
 }
-func decodePackageFile(pf packageFile, p *Package)  {
+
+func DecodeProjectFile(pf ProjectFile, p *Project) {
+	p.name = pf.Name
+	for _, d := range pf.Dependencies {
+		v, _ := ParseVersion(d.Version)
+		p.AppendDependency(NewProjectID(d.Name, v))
+	}
+	for _, d := range pf.Remotes {
+		p.RemoteAdd(DecodeRemoteFile(d))
+	}
+}
+func DecodePackageFile(pf PackageFile, p *Package) {
 	prj := new(Project)
-	decodeProjectFile(pf.Self, prj)
+	DecodeProjectFile(pf.Self, prj)
 	p.self = *prj
 	p.timestamp = pf.Timestamp
-	v,_ := ParseVersion(pf.Version)
+	v, _ := ParseVersion(pf.Version)
 	p.version = v
 }
 
-
-func encodePackageFile(p Package) *packageFile{
-	return &packageFile{
-		Self : *encodeProjectFile(p.self),
+func EncodePackageFile(p Package) *PackageFile {
+	return &PackageFile{
+		Self:      *EncodeProjectFile(p.self),
 		Timestamp: p.timestamp,
+		Version:   p.version.String(),
+	}
+
+}
+
+func EncodeProjectIDFile(p ProjectID) *ProjectIDFile {
+	return &ProjectIDFile{
+		Name:    p.name,
 		Version: p.version.String(),
 	}
-	
 }
-
-func encodeProjectIDFile(p ProjectID) *projectIDFile {
-return &projectIDFile{
-	Name: p.name,
-	Version: p.version.String(),
-}
-}
-func encodeProjectFile(p Project) *projectFile {
-	dep := make([]projectIDFile,0, len(p.dependencies))
-	
-	for _,d:= range p.dependencies{
-		dep = append(dep, *encodeProjectIDFile(d))
+func EncodeProjectFile(p Project) *ProjectFile {
+	dep := make([]ProjectIDFile, 0, len(p.dependencies))
+	for _, d := range p.dependencies {
+		dep = append(dep, *EncodeProjectIDFile(d))
 	}
-	
-return &projectFile{
-		Name: p.name,
+
+	rep := make([]RemoteFile, 0, len(p.remotes))
+	for _, r := range p.remotes {
+		rep = append(rep, *EncodeRemoteFile(r))
+	}
+
+	return &ProjectFile{
+		Name:         p.name,
 		Dependencies: dep,
+		Remotes:      rep,
 	}
 }

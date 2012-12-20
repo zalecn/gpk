@@ -1,0 +1,34 @@
+
+Use Cases
+=========
+
+
+
+
+Releasing a non root  project.
+	stage it to some repo ( := stage it )
+		once everything has been validated => go to the stagging repo and "promote" to another one ( =>TODO promote repo)
+	promote the stage repo
+
+release a root project: (ie a final top level one, ie one containing binaries the only "real" output):
+	stage it
+		"build the binaries" on every platforms, and push them to the same staging repo ( =>TODO build binaries command)
+	promote the stage repo
+
+
+
+releasing a complex project (several snapshot dependencies ):
+	computes the staging order
+	stage dependencies (it creates a local staging file, that will be reused) 
+		this includes updating the project's dependencies to the staged versions (=>TODO gpk stage apply part of stage command)
+	stage the root project
+	build binaries on every platform
+	promote the stage repo
+
+
+
+
+
+
+issue: what if I have a lot of project with a same snapshot dependencies (like, utils for instance) I would need to update the dependencies all in one.
+For that I need to store the real working dir into the packaged project ( so that I can try to really interconnect projects )

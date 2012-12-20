@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
-	digits = `(\d)+\.(\d)+\.(\d)+`
+	digits = `(\d+)?(?:\.(\d+)(?:\.(\d+))?)?`
 	sub    = `[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*`
-	all    = `%s(?:\-(%s))?(?:\+(%s))?`
+	all    = `%s(?:\-?(%s))?(?:\+(%s))?`
 )
 
 var (
@@ -22,16 +23,17 @@ type Version struct {
 	pre, build          string
 }
 
-
-
 // TODO add tests and methods to this struct
 // TODO add persistence format control ( string back and forth is a good objective)
 
 func (v Version) String() (version string) {
 	version = fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
-
-	if len(v.pre) != 0 {
-		version += fmt.Sprintf("-%s", v.pre)
+	if v.major == 0 && v.minor == 0 && v.patch == 0 {
+		version = fmt.Sprintf("%s", v.pre)
+	} else {
+		if len(v.pre) != 0 {
+			version += fmt.Sprintf("-%s", v.pre)
+		}
 	}
 	if len(v.build) != 0 {
 		version += fmt.Sprintf("+%s", v.build)
@@ -45,8 +47,9 @@ func atoi(s string) uint32 {
 }
 
 func ParseVersion(v string) (version Version, err error) {
-
+	v = strings.Trim(v, " {}[]\"'")
 	parts := SemVer.FindStringSubmatch(v)
+	//fmt.Printf("%24s -> %v\n",v, parts[1:])
 	version = Version{
 		major: atoi(parts[1]),
 		minor: atoi(parts[2]),
@@ -55,5 +58,4 @@ func ParseVersion(v string) (version Version, err error) {
 		build: parts[6],
 	}
 	return
-
 }

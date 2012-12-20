@@ -9,8 +9,8 @@ import (
 )
 
 func init() {
-	file := func(u url.URL) RemoteRepository {
-		f, _ := NewFileRemoteRepository(u)
+	file := func(name string, u url.URL) RemoteRepository {
+		f, _ := NewFileRemoteRepository(name, u)
 		return f
 	}
 	RegisterRemoteRepositoryFactory("file", file)
@@ -19,16 +19,27 @@ func init() {
 //FileRemoteRepository act as a remote repository for a 
 type FileRemoteRepository struct {
 	repo LocalRepository // contains a local repo
+	name string
 }
 
-func NewFileRemoteRepository(u url.URL) (r *FileRemoteRepository, err error) {
+func NewFileRemoteRepository(name string, u url.URL) (r *FileRemoteRepository, err error) {
 	loc, err := NewLocalRepository(u.Path)
 	r = &FileRemoteRepository{
 		repo: *loc,
+		name: name,
 	}
 	return
 
 }
+
+func (r FileRemoteRepository) Name() string {return r.name}
+func (r FileRemoteRepository) Path() url.URL {
+	return url.URL{
+	Scheme: "file",
+	Path: r.repo.Root(),
+	}
+}
+
 
 func (r *FileRemoteRepository) UploadPackage(p *Package) (err error) {
 	dst := filepath.Join(r.repo.Root(), p.Path())

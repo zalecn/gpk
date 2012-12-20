@@ -4,7 +4,6 @@ import (
 	. "ericaro.net/gpk"
 	"flag"
 	"fmt"
-	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -16,9 +15,7 @@ const (
 	DefaultRepository = ".gpkrepository"
 )
 
-var (
-	GopackageCentral, _ = url.Parse("http://gpk.ericaro.net")
-)
+
 
 // here are gopackage flags not specific ones
 
@@ -45,9 +42,9 @@ func init() {
 var Help = Command{
 	Name:      `help`,
 	Alias:     `h`,
-	UsageLine: `<command>`,
-	Short:     `Display more advanced help for the given command`,
-	Long:      `Display more advanced help for the given command`,
+	UsageLine: `[Command]`,
+	Short:     `Display help information about gpk`,
+	Long:      `Display Longer description relative to a command`,
 	call:      func(c *Command) { c.Help() },
 }
 
@@ -64,19 +61,35 @@ func (c *Command) Help() {
 		PrintGlobalUsage()
 		return
 	}
+
+
 	
-	fmt.Printf( //TODO beautify with console colors
-`gpk %s %s
 
-%s
-
-%s
-`, cmd.Name, cmd.UsageLine, cmd.Short, cmd.Long )
-
+	fmt.Printf("\nusage: %s\n", TitleStyle.Sprintf("gpk %s %s",cmd.Name, cmd.UsageLine) )
+	fmt.Printf("    %s\n", ShortStyle.Sprintf("%s", cmd.Short) )
+	fmt.Printf("where:\n")
+	TitleStyle.Printf("    %-10s %-20s %s\n", "option", "default", "usage")
+	cmd.Flag.VisitAll(printFlag)
+	fmt.Print(cmd.Long)
 }
 
+func printFlag( f *flag.Flag ) {
+	fmt.Printf("    -%-10s %-20s %s\n", f.Name, f.DefValue, f.Usage)
+	
+}
+
+
 func PrintGlobalUsage() {
-	fmt.Printf("%s [general options] <alias|name> [options]  \n", Cmd)
+	TitleStyle.Printf("\ngpk is a go package kit: manage go packages dependencies.\n") 
+	fmt.Printf("\nusage: ")
+	TitleStyle.Printf("%s [general options] <command> [options]  \n", Cmd)
+
+	fmt.Printf("Where general options are:\n")
+	TitleStyle.Printf("    %-10s %-20s %s\n", "option", "default", "usage")
+	flag.VisitAll(printFlag)
+	fmt.Println()
+	fmt.Printf("Where <command> are:\n")
+
 	fmt.Printf("  %-8s %-10s %s\n", "alias", "name", "description")
 	fmt.Printf("  -------------------\n")
 
@@ -85,20 +98,24 @@ func PrintGlobalUsage() {
 	}
 }
 
+
 func main() {
 
+	
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
 		fmt.Println("Version:", GopackageVersion)
 		return
 	}
-
+	if len(flag.Args() ) == 0 {
+		PrintGlobalUsage()
+		return
+	}
 	cmdName := flag.Arg(0)
 	cmd, ok := Commands[cmdName]
 	if !ok {
-		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
+		ErrorStyle.Printf("Unknown command %v\n", cmdName)
 		PrintGlobalUsage()
-
 		return
 	}
 
@@ -123,7 +140,6 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 	u, _ := user.Current()
 	path := filepath.Join(u.HomeDir, *localRepositoryFlag)
 	path = filepath.Clean(path)
-	fmt.Printf("local repo = %s\n", path)
 	return NewLocalRepository(path)
 }
 

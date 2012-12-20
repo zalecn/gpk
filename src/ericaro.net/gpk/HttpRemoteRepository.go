@@ -12,8 +12,8 @@ import (
 
 
 func init() {
-	http := func(u url.URL) RemoteRepository{
-		h,_ := NewHttpRemoteRepository(u)
+	http := func(name string, u url.URL) RemoteRepository{
+		h,_ := NewHttpRemoteRepository(name, u)
 		return h
 		}
 	RegisterRemoteRepositoryFactory("http", http)
@@ -24,13 +24,19 @@ func init() {
 // contains a remote repo based on http
 type HttpRemoteRepository struct {
 	ServerHost url.URL
+	name string
 }
 
-func NewHttpRemoteRepository(url url.URL) (remote *HttpRemoteRepository, err error){
-	return &HttpRemoteRepository{ServerHost: url}, nil
+func NewHttpRemoteRepository(name string, url url.URL) (remote *HttpRemoteRepository, err error){
+	return &HttpRemoteRepository{
+		ServerHost: url,
+		name: name,
+		}, nil
 
 } 
 
+func (r HttpRemoteRepository) Name() string {return r.name}
+func (r HttpRemoteRepository) Path() url.URL {return r.ServerHost	}
 
 
 //ReadPackage from this remote repository. Reads the http request's body into a buffer and returns.

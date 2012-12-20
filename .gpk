@@ -1,1 +1,1 @@
-{"Name":"ericaro.net/gpk","Dependencies":[{"Name":"google.com/appengine","Version":"0.0.1-bigbang"}]}
+{"Name":"ericaro.net/gpk","Dependencies":[{"Name":"google.com/appengine","Version":"0.0.1-bigbang"}],"Remotes":[{"Name":"central","Url":"http://gpk.ericaro.net"},{"Name":"lrelease","Url":"file:/home/eric/.gpkrepository2"},{"Name":"lgae","Url":"http://localhost:8080"}]}

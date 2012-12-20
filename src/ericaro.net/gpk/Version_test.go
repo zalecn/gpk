@@ -13,8 +13,10 @@ type Pair struct {
 func TestVersionParsing(t *testing.T) {
 	
 	pairs := []Pair{
+		Pair{ "master"                , Version{0,0,0,"master",""		}},
+		Pair{ "10.0.0"                , Version{10,0,0,"",""			   }},
 		Pair{ "1.0.0"                 , Version{1,0,0,"",""				   }},
-        Pair{ "1.0.0-alpha", Version{1,0,0,"alpha",""	       }},
+        Pair{ "1.0.0-alpha"           , Version{1,0,0,"alpha",""	       }},
         Pair{ "1.0.0-alpha.1         ", Version{1,0,0,"alpha.1",""         }},
         Pair{ "1.0.0-beta.2          ", Version{1,0,0,"beta.2",""          }},
         Pair{ "1.0.0-beta.11         ", Version{1,0,0,"beta.11",""         }},
@@ -33,7 +35,7 @@ func TestVersionParsing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Cannot parse%v \n", v)
 		}
-		if *ver != 	v.v {
+		if ver != 	v.v {
 	
 			t.Fatalf("Result mismatch (expected then result) \n%v\n%v \n", v.v, ver)
 		}
