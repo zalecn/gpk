@@ -40,6 +40,15 @@ func (v Version) String() (version string) {
 	}
 	return
 }
+func (v Version) Digits() (major, minor, patch uint32) {
+	return v.major, v.minor, v.patch
+}
+func (v Version) PreRelease() string {
+	return v.pre
+}
+func (v Version) Build() string {
+	return v.build
+}
 
 func (v Version) IsSnapshot() bool {
 	return v.major == 0 && v.minor == 0 && v.patch == 0

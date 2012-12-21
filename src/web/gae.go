@@ -10,11 +10,16 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"encoding/json"
 )
 
 //a Package is a pure, in-memory representation of a Package
 type GaePackage struct {
 	Timestamp   time.Time
+	Package string // package name (for queries)
+	Major, Minor, Patch int // version digits
+	PreRelease string
+	Build string
 	ContentBlob appengine.BlobKey // tar.gz of the content
 
 }
@@ -41,6 +46,19 @@ func gaenewer(w http.ResponseWriter, r *http.Request) {
 		Context: appengine.NewContext(r),
 	}
 	httpserver.Newer(be, w, r)
+}
+func gaecanpush(w http.ResponseWriter, r *http.Request) {
+	be := &GaeBackendServer{
+		Context: appengine.NewContext(r),
+	}
+	httpserver.CanPush(be, w, r)
+}
+
+func gaesearch(w http.ResponseWriter, r *http.Request) {
+	be := &GaeBackendServer{
+		Context: appengine.NewContext(r),
+	}
+	httpserver.SearchPackage(be, w, r)
 }
 
 //func (s *GaeBackendServer) Debugf(format string, args ...interface{}) {
@@ -85,9 +103,16 @@ func (s *GaeBackendServer) Receive(id gpk.ProjectID, timestamp time.Time, w http
 	}
 
 	// build the entity
-
+	v:= pack.Version()
+	maj,min, patch := v.Digits()
 	p := &GaePackage{
+		Package : pack.Name(),
 		Timestamp : pack.Timestamp(),
+		Major: int(maj),
+		Minor: int(min),
+		Patch: int(patch),
+		PreRelease: v.PreRelease(),
+		Build : v.Build(),
 		ContentBlob: blobkey,
 	}
 
@@ -120,10 +145,59 @@ func (s *GaeBackendServer) Newer(id gpk.ProjectID, timestamp time.Time, w http.R
 	}
 }
 
+func (s *GaeBackendServer) CanPush(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) {
+	c := s.Context
+	p := new(GaePackage)
+	err := datastore.Get(c, datastore.NewKey(c, "GaePackage", id.ID(), 0, nil), p)
+	var canpush bool
+	if err != nil {
+		canpush = true
+	} else {
+		canpush = p.Timestamp.Before(timestamp)
+	}
+	
+	if ! canpush{
+		http.NotFound(w, r)
+		return
+	}
+}
+
+func (s *GaeBackendServer) SearchPackage(search string, w http.ResponseWriter, r *http.Request) {
+		
+	q := datastore.NewQuery("GaePackage").
+        Filter("Package >=", search).
+        Filter("Package <", search+string('\uFFFD')).
+        Order("Package").
+        Limit(100)
+        
+    //count, err := q.Count(s.Context) 
+    //s.Context.Debugf("searching %s, %d, %s", search, count, err)
+    result:= make([]string, 100)
+    i:=0
+    for t := q.Run(s.Context); ;i++ {
+        x := new( GaePackage )
+        _, err := t.Next(x)
+        if err == datastore.Done {
+                break
+        }
+        if err != nil {
+                http.NotFound(w, r)
+                return
+        }
+        //s.Context.Debugf("found %s", x.Package)
+        result[i]= x.Package
+    }
+    w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result[:i])
+	
+}
+
 func (s *GaeBackendServer) DeleteBlob(k appengine.BlobKey) (err error) {
 	return blobstore.Delete(s.Context, k)
 
 }
+
+
 
 type handlerFunc func(http.ResponseWriter, *http.Request) error
 
@@ -131,4 +205,6 @@ func init() {
 	http.HandleFunc("/p/dl", gaesend)
 	http.HandleFunc("/p/ul", gaereceive)
 	http.HandleFunc("/p/nl", gaenewer)
+	http.HandleFunc("/p/cp", gaecanpush)
+	http.HandleFunc("/p/qp", gaesearch)
 }

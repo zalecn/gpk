@@ -29,7 +29,7 @@ var Serve = Command{
 var Push = Command{
 	Name:           `push`,
 	Alias:          `push`,
-	UsageLine:      `<remote> <version>`,
+	UsageLine:      `<remote> <package> <version>`,
 	Short:          `Push a project in a remote repository`,
 	Long:           `Push a project in a remote repository`,
 	call:           func(c *Command) { c.Push() },
@@ -61,6 +61,8 @@ func (c *Command) Serve() {
 }
 
 //var deployAddrFlag *string = Push.Flag.String("to", "central", "deploy to a specific remote repository.")
+var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
+
 func (c *Command) Push() {
 
 	rem := c.Flag.Arg(0)
@@ -76,18 +78,42 @@ func (c *Command) Push() {
 		return
 	}
 
-	version, err := ParseVersion(c.Flag.Arg(1))
+	version, err := ParseVersion(c.Flag.Arg(2))
 	if err != nil {
 		ErrorStyle.Printf("Invalid Version: %s\n", err)
 		return
 	}
 
-	fmt.Printf("Installing ...\n")
-	// ? really ? 
-	pkg := c.Repository.InstallProject(c.Project, version) // ensure that the project is installed first in the local repo
+	pkg, err := c.Repository.FindPackage(NewProjectID(c.Flag.Arg(1), version))
+	if err != nil {
+		ErrorStyle.Printf("Cannot find Package %s %s in Local Repository %s. Due to %s\n", c.Flag.Arg(1), c.Flag.Arg(2), c.Repository.Root(), err)
+		// TODO as soon as I've got some search capability display similar results
+		return
+	}
 
-	u := remote.Path()
-	fmt.Printf("Pushing to %s\n", u.String())
+	// if -r I need to resolve dependencies first
+	rUrl := remote.Path()
+	fmt.Printf("Pushing to %s\n", rUrl.String())
+	if *pushRecursiveFlag {
+		dependencies, err := c.Repository.ResolvePackageDependencies(pkg, true, false)
+		if err != nil {
+			ErrorStyle.Printf("Cannot Resolve packages dependencies. %s\n", err);
+			return
+		}
+		for _, d := range dependencies {
+			// I need to test if I really need to push it or not !
+			canpush := d.Version().IsSnapshot() // always try to push snapshots
+			if !canpush { // ask the remote its opinion.
+				canpush, _ = remote.CheckPackageCanPush(d)
+			}
+			if canpush {
+				fmt.Printf("Pushing %s\n", d.ID())
+				remote.UploadPackage(d)
+			}
+		}
+	}
+
+	fmt.Printf("Pushing %s\n", pkg.ID()) 
 	remote.UploadPackage(pkg)
 }
 

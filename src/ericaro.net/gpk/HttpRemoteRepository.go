@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"encoding/json"
 )
 
 
@@ -68,6 +69,31 @@ func (r *HttpRemoteRepository) ReadPackage(p ProjectID) (reader io.Reader, err e
 	}
 	reader = buf
 	return
+}
+
+
+
+func (r *HttpRemoteRepository) CheckPackageCanPush(p *Package) (canpush bool, err error) {
+	v := url.Values{}
+	v.Set("n", p.self.name)
+	v.Set("v", p.version.String())
+	v.Set("t", p.timestamp.Format(time.ANSIC)) // ?
+
+	//query url
+	u := r.ServerHost.ResolveReference(&url.URL{
+		//scheme://[userinfo@]host/path[?query][#fragment]
+		Path:     "p/cp",
+		RawQuery: v.Encode(),
+	})
+	
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return true, err
+	}
+	if resp.StatusCode != 200 || resp.StatusCode != 404 {
+		err = errors.New(fmt.Sprintf("http query failed %d: %v", resp.StatusCode, resp.Status))
+	}
+	return resp.StatusCode == 200, err
 }
 
 func (r *HttpRemoteRepository) CheckPackageUpdate(p *Package) (newer bool, err error) {
@@ -131,5 +157,25 @@ func (r *HttpRemoteRepository) UploadPackage(p *Package) (err error) { // TODO a
 	}
 	fmt.Printf("uploaded")
 	return
+}
+
+func (r *HttpRemoteRepository) SearchPackage(search string) (result []string){
+	v := url.Values{}
+	v.Set("n", search)
+	//query url
+	u := r.ServerHost.ResolveReference(&url.URL{
+		//scheme://[userinfo@]host/path[?query][#fragment]
+		Path:     "p/qp",
+		RawQuery: v.Encode(),
+	})
+	
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return result
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
+	resp.Body.Close()
+	//fmt.Printf("Received %s\n", result)
+	return result
 }
 

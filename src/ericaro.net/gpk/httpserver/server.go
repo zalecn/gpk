@@ -14,8 +14,11 @@ type BackendServer interface {
 	//Contains return true if the server contains the ProjectID
 	Send(id gpk.ProjectID, w http.ResponseWriter, r *http.Request)
 	
+	CanPush(id gpk.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
 	Newer(id gpk.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
 	Receive(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error)
+	SearchPackage(search string, w http.ResponseWriter, r *http.Request)
+	
 }
 
 //Receive HandlerFunc that s
@@ -57,6 +60,28 @@ func Newer(s BackendServer, w http.ResponseWriter, r *http.Request) {
 	pr := gpk.NewProjectID(name, version)
 	s.Newer(pr, timestamp,  w, r)
 
+}
+func CanPush(s BackendServer, w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("n")
+	version, _ := gpk.ParseVersion(r.FormValue("v"))
+	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
+
+	if name == "" {
+		http.NotFound(w, r)
+		return
+	}
+	pr := gpk.NewProjectID(name, version)
+	s.CanPush(pr, timestamp,  w, r)
+
+}
+
+func SearchPackage(s BackendServer, w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("n")
+	if name == "" {
+		http.NotFound(w, r)
+		return
+	}
+	s.SearchPackage(name,  w, r)
 }
 
 func Send(s BackendServer, w http.ResponseWriter, r *http.Request) {

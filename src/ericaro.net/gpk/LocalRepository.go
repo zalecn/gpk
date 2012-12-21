@@ -12,13 +12,17 @@ import (
 	"time"
 )
 
-
+const (
+	GpkrepositoryFile = ".gpkrepository"
+)
 
 //RemoteRepository is any code that can act as a remote. usually a project has a chain of remote repository where to look
 type RemoteRepository interface {
+	CheckPackageCanPush(p *Package) (newer bool, err error)
 	CheckPackageUpdate(p *Package) (newer bool, err error)
 	ReadPackage(p ProjectID) (r io.Reader, err error)
 	UploadPackage(p *Package) (err error)
+	SearchPackage(search string) ([]string)
 	Name() string
 	Path() url.URL
 	// TODO provide some "reader" from the remote, so local can copy it down
@@ -43,12 +47,12 @@ func NewRemoteRepository(name string, u url.URL) RemoteRepository {
 }
 
 type LocalRepository struct {
-	root string // absolute path to the repo, this must be a filesystem writable path.
+	root    string // absolute path to the repo, this must be a filesystem writable path.
 	remotes []RemoteRepository
 }
 
 func (p LocalRepository) Write() (err error) {
-	dst := filepath.Join(p.root, GpkFile)
+	dst := filepath.Join(p.root, GpkrepositoryFile)
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -72,11 +76,11 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	}
 
 	r = &LocalRepository{
-		root: root,
-		remotes : []RemoteRepository{Central},
+		root:    root,
+		remotes: []RemoteRepository{Central},
 	}
-	
-	f, err2 := os.Open(filepath.Join(root, GpkFile))
+
+	f, err2 := os.Open(filepath.Join(root, GpkrepositoryFile))
 	if err2 != nil {
 		return
 	}
@@ -84,7 +88,6 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	err = DecodeLocalRepository(f, r)
 	return
 }
-
 
 func (r *LocalRepository) Remotes() []RemoteRepository {
 	return r.remotes
@@ -126,7 +129,6 @@ func (p *LocalRepository) RemoteRemove(name string) (err error) {
 	return
 }
 
-
 func (r *LocalRepository) FindPackage(p ProjectID) (prj *Package, err error) {
 	relative := p.Path()
 	abs := filepath.Join(r.root, relative, GpkFile)
@@ -151,7 +153,7 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	// computes the project relative path 
 	// computes the absolute path
 	dst := filepath.Join(r.root, p.Path())
-//	fmt.Printf("Installing to %s %s %s\n", r.root, p.Path(), dst)
+	//	fmt.Printf("Installing to %s %s %s\n", r.root, p.Path(), dst)
 	_, err := os.Stat(dst)
 	if os.IsExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
@@ -174,12 +176,34 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	return
 }
 
+// search for package starting with name, and return them
+func (r *LocalRepository) SearchPackage(search string) (result []string) {
+	sp := filepath.Join(r.root, search)
+	sd := filepath.Dir(sp)
+	base := filepath.Base(sp)
+	
+	results := make([]string, 100)
+	i:=0
+	handler := func(srcpath string) {
+		//fmt.Printf("found  %s %d\n", srcpath, i)
+		results[i], _= filepath.Rel(r.root, srcpath)
+		i++
+	}
+	PackageWalker(sd, base, handler)
+	//fmt.Printf("found  %s\n", results[:i])
+	return results[:i]
+}
+
+func (r *LocalRepository) ResolvePackageDependencies(p *Package, offline, update bool) (dependencies []*Package, err error) {
+	return r.ResolveDependencies(&p.self, offline, update)
+}
+
 //FindProjectDependencies lookup recursively for all project dependencies
 func (r *LocalRepository) ResolveDependencies(p *Project, offline, update bool) (dependencies []*Package, err error) {
 	depMap := make(map[ProjectID]*Package)
 	dependencies = make([]*Package, 0, 10)
-	
-	err = r.findProjectDependencies(p, r.remotes, depMap,&dependencies, offline, update)
+
+	err = r.findProjectDependencies(p, r.remotes, depMap, &dependencies, offline, update)
 	if err != nil {
 		return
 	}
@@ -227,7 +251,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRe
 			}
 			dependencies[d] = prj
 			*dependencyList = append(*dependencyList, prj)
-			err = r.findProjectDependencies(&prj.self, remotes, dependencies, dependencyList,  offline, update)
+			err = r.findProjectDependencies(&prj.self, remotes, dependencies, dependencyList, offline, update)
 			if err != nil {
 				return err
 			}

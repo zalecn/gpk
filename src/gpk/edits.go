@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 )
 
 func init() {
@@ -13,6 +14,7 @@ func init() {
 		&Add,
 		&Remove,
 		&List,
+		&Search,
 		&AddRemote,
 		&RemoveRemote,
 		&Init,
@@ -54,6 +56,15 @@ var List = Command{
 	Long:           `List all dependencies in a dependency order. Meaning that for any given package, all its dependencies are listed before it.`,
 	call:           func(c *Command) { c.List() },
 	RequireProject: true,
+}
+var Search = Command{
+	Name:           `search`,
+	Alias:          `s`,
+	UsageLine:      `<search>`,
+	Short:          `Search Packages.`,
+	Long:           `Search Packages in the local repository that starts with the query`,
+	call:           func(c *Command) { c.Search() },
+	RequireProject: false,
 }
 var AddRemote = Command{
 	Name:      `add-remote`,
@@ -174,6 +185,44 @@ func (c *Command) List() {
 			fmt.Printf("        %-40s %s\n", d.Name(), d.Version().String())
 		}
 	}
+}
+
+var searchRemoteFlag *string = Search.Flag.String("r", "", "Search in the remote <remote> instead")
+
+func (c *Command) Search() {
+	search := c.Flag.Arg(0)
+	var result []string
+	if *searchRemoteFlag != "" {
+		rem := *searchRemoteFlag
+		remote, err := c.Repository.Remote(rem)
+		if err != nil {
+			ErrorStyle.Printf("Unknown remote %s.\n", rem)
+
+			fmt.Printf("Available remotes are:\n")
+			for _, r := range c.Repository.Remotes() {
+				u := r.Path()
+				fmt.Printf("    %-40s %s\n", r.Name(), u.String())
+			}
+			return
+		}
+		result = remote.SearchPackage(search)
+	} else {
+		result = c.Repository.SearchPackage(search)
+	}
+
+	pkg := ""
+	for _, v := range result {
+		if v == pkg { // do not print if not new
+			v = ""
+		} else {
+			pkg = v
+		}
+
+		fmt.Printf("    %-40s %s\n",
+			v,
+			filepath.Base(v))
+	}
+
 }
 
 func (c *Command) AddRemote() {

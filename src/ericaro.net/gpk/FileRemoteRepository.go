@@ -41,7 +41,8 @@ func (r FileRemoteRepository) Path() url.URL {
 }
 
 
-func (r *FileRemoteRepository) UploadPackage(p *Package) (err error) {
+func (r *FileRemoteRepository) UploadPackage(pkg *Package) (err error) {
+	p:= *pkg
 	dst := filepath.Join(r.repo.Root(), p.Path())
 	_, err = os.Stat(dst)
 	if os.IsExist(err) { // also check for the local policy
@@ -60,8 +61,26 @@ func (r *FileRemoteRepository) UploadPackage(p *Package) (err error) {
 	}
 	//makes the copy
 	walkDir(filepath.Join(dst, "src"), filepath.Join(p.InstallDir(), "src"), dirHandler, fileHandler)
-
+	
+	p.self.workingDir = dst
+	p.Write()
 	return
+}
+
+func (r *FileRemoteRepository) CheckPackageCanPush(p *Package) (canpush bool, err error) {
+	// cave at p is the local package, I need to check for the same version in this one
+	rp, err := r.repo.FindPackage(p.ID())
+	if err != nil {
+		canpush = true
+	} else {
+		canpush = rp.timestamp.Before(p.timestamp)
+	}
+	return
+	
+}
+
+func (r *FileRemoteRepository) SearchPackage(search string) ([]string){
+	return r.repo.SearchPackage(search)
 }
 
 func (r *FileRemoteRepository) CheckPackageUpdate(p *Package) (newer bool, err error) {

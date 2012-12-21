@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,30 @@ func walkDir(dst, src string, dirHandler, fileHandler func(dst, src string) erro
 			if err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func PackageWalker(srcpath, startwith string, handler func(gpkpath string)) error {
+
+	file, err := os.Open(srcpath)
+	if err != nil {
+		return err
+	}
+	subdir, err := file.Readdir(-1)
+
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range subdir {
+		if fi.IsDir() && strings.HasPrefix(fi.Name(), startwith) {
+			PackageWalker(filepath.Join(srcpath, fi.Name()), "", handler)
+		} else if fi.Name() == GpkFile {
+			//then src path is the package/version directory
+			handler(srcpath)
+			break
 		}
 	}
 	return nil
