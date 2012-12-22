@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	. "ericaro.net/gpk"
@@ -42,9 +42,9 @@ func init() {
 var Help = Command{
 	Name:      `help`,
 	Alias:     `h`,
-	UsageLine: `[Command]`,
-	Short:     `Display help information about gpk`,
-	Long:      `Display Longer description relative to a command`,
+	UsageLine: `[COMMAND]`,
+	Short:     `Display help information about COMMAND`,
+	Long:      ``, // better nothing than repeat
 	call:      func(c *Command) { c.Help() },
 }
 
@@ -80,7 +80,7 @@ func printFlag( f *flag.Flag ) {
 
 
 func PrintGlobalUsage() {
-	TitleStyle.Printf("\ngpk is a go package kit: manage go packages dependencies.\n") 
+	TitleStyle.Printf("\nGopack is a software project management tool for Golang.\n") 
 	fmt.Printf("\nusage: ")
 	TitleStyle.Printf("%s [general options] <command> [options]  \n", Cmd)
 
@@ -99,7 +99,7 @@ func PrintGlobalUsage() {
 }
 
 
-func main() {
+func Gopack() {
 
 	
 	flag.Parse() // Scan the main arguments list

@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	. "ericaro.net/gpk"
@@ -10,6 +10,7 @@ import (
 
 func init() {
 	Reg(
+		&Init,
 		&Status,
 		&Add,
 		&Remove,
@@ -17,17 +18,52 @@ func init() {
 		&Search,
 		&AddRemote,
 		&RemoveRemote,
-		&Init,
 	)
 
 }
+
+var Init = Command{
+	Name:      `init`,
+	Alias:     `!`,
+	UsageLine: `NAME`,
+	Short:     `Initialize current directory.`,
+	Long: `In the current directory creates or updates the gopack project file, and name the current package NAME
+`,
+	call: func(c *Command) { c.Init() },
+}
+
+
+func (c *Command) Init() {
+
+	p, err := ReadProject()
+	if err == nil {
+		fmt.Printf("warning: init an existing project. This is fine if you want to edit it\n")
+	}
+	p.SetName(c.Flag.Arg(0))
+	pwd, err := os.Getwd()
+	p.SetWorkingDir(pwd)
+
+	c.Project = p // in case we implement sequence of commands (in the future)
+
+	if err != nil {
+		fmt.Printf("Cannot create the project, there is no current directory. Because %v\n", err)
+	}
+	p.Write()
+
+}
+
+
+
+
+
+
 
 var Status = Command{
 	Name:           `status`,
 	Alias:          `?`,
 	UsageLine:      ``,
 	Short:          `Print status`,
-	Long:           `Print status`,
+	Long:           ``,
 	call:           func(c *Command) { c.Status() },
 	RequireProject: true,
 }
@@ -38,13 +74,13 @@ var Add = Command{
 	UsageLine: `<name> <version>`,
 	Short:     `Add a dependency.`,
 	Long: `Dependency is formatted as follow
-	name    : any string
-	version : is a version syntax
-	          <root>-X.X.X.X
-	          where:
-	          root : is a simple branch name
-	          X    : is an unsigned int  
-	`,
+
+name
+    any string
+version
+    a version definition with Semantic Version syntax  
+
+`,
 	call:           func(c *Command) { c.Add() },
 	RequireProject: true,
 }
@@ -71,8 +107,7 @@ var AddRemote = Command{
 	Alias:     `r+`,
 	UsageLine: `<name> <url>`,
 	Short:     `Add a remote server.`,
-	Long: `Remote server can be used to publish or share code snapshots  
-	`,
+	Long: `Remote server can be used to publish or share code snapshots`,
 	call:           func(c *Command) { c.AddRemote() },
 	RequireProject: false,
 }
@@ -81,16 +116,15 @@ var Remove = Command{
 	Alias:     `-`,
 	UsageLine: `<name> <version>`,
 	Short:     `Remove dependency`,
-	Long: `Dependencies are formatted as follow
-	where   :
-	name    : any string
-	artifact: is a simple name (usually not hierarchical )
-	version : is a version syntax
-	          <root>-X.X.X.X
-	          where:
-	          root : is a simple branch name
-	          X    : is an unsigned int  
-	`,
+	Long: `Dependencies are formatted as follow:
+
+name
+    any string
+artifact
+    is a simple name (usually not hierarchical )
+version
+    is a version definition in semantic version syntax.
+`,
 	call:           func(c *Command) { c.Remove() },
 	RequireProject: true,
 }
@@ -104,15 +138,6 @@ var RemoveRemote = Command{
 	RequireProject: false,
 }
 
-var Init = Command{
-	Name:      `init`,
-	Alias:     `!`,
-	UsageLine: `<name>`,
-	Short:     `Init the current directory as a go package kit project.`,
-	Long: `where   :
-	name   : any string`,
-	call: func(c *Command) { c.Init() },
-}
 
 //var statusX *bool = status.Flag.Bool("x",false, "test" )
 
@@ -132,24 +157,7 @@ func (c *Command) Status() {
 
 }
 
-func (c *Command) Init() {
 
-	p, err := ReadProject()
-	if err == nil {
-		fmt.Printf("warning: init an existing project. This is fine if you want to edit it\n")
-	}
-	p.SetName(c.Flag.Arg(0))
-	pwd, err := os.Getwd()
-	p.SetWorkingDir(pwd)
-
-	c.Project = p // in case we implement sequence of commands (in the future)
-
-	if err != nil {
-		fmt.Printf("Cannot create the project, there is no current directory. Because %v\n", err)
-	}
-	p.Write()
-
-}
 
 func (c *Command) Add() {
 

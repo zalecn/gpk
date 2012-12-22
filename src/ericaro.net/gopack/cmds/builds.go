@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	. "ericaro.net/gpk"
@@ -21,10 +21,10 @@ var Path = Command{
 	Alias:     `p`,
 	UsageLine: ``,
 	Short:     `Compute project's GOPATH`,
-	Long: `    Resolve current project dependencies and print the GOPATH variable.
-    Used with -l it provides a pretty print of the list.
+	Long: `Resolve current project dependencies and print the GOPATH variable.
+Used with -l it provides a pretty print of the list.
     
-    ` + "Tip: type \n\n        alias GP='export GOPATH=`gpk path`'\n\n    this is a simple way to automatically export your GOPATH.",
+` + "Tip: type \n\n        alias GP='export GOPATH=`gpk path`'\n\n    this is a simple way to automatically export your GOPATH.",
 	call:           func(c *Command) { c.Path() },
 	RequireProject: true,
 }
@@ -34,8 +34,8 @@ var Compile = Command{
 	Alias:     `x`,
 	UsageLine: ``,
 	Short:     `Compile project`,
-	Long: `    Computes current project dependencies as a GOPATH variable (accessible through the p Option),
- and then run go install on the project.`,
+	Long: `Computes current project dependencies as a GOPATH variable (accessible through the p Option),
+and then run go install on the project.`,
 	call:           func(c *Command) { c.Compile() },
 	RequireProject: true,
 }
@@ -45,14 +45,14 @@ var Install = Command{
 	Alias:     `i`,
 	UsageLine: `<version>`,
 	Short:     `Install into the local repository`,
-	Long: `    Make the current project sources available in the local repository under the ID <package>:<version>.
+	Long: `Make the current project sources available in the local repository under the ID <package>:<version>.
 	
-    <version> denotes a semantic version to identify this specific project version.
+<version> denotes a semantic version to identify this specific project version.
     
-    Installing to the local repository  will replace any existing code in the local repository. 
-    This is a "snapshot" behavior: installing v1 will replace existing v1.
+Installing to the local repository  will replace any existing code in the local repository. 
+This is a "snapshot" behavior: installing v1 will replace existing v1.
     
-    If you are interested in handling "read only" version (released version) please consider using "gpk deploy" instead.  
+If you are interested in handling "read only" version (released version) please consider using "gpk deploy" instead.  
     `,
 	call:           func(c *Command) { c.Install() },
 	RequireProject: true,
@@ -63,8 +63,8 @@ var Test = Command{
 	Alias:     `t`,
 	UsageLine: ``,
 	Short:     `Run go test`,
-	Long: `    Compute current project dependencies as a GOPATH variable (accessible through the p Option),
- and then run go test on the whole project.`,
+	Long: `Compute current project dependencies as a GOPATH variable (accessible through the p Option),
+and then run go test on the whole project.`,
 	call:           func(c *Command) { c.Test() },
 	RequireProject: true,
 }

@@ -19,7 +19,7 @@ func NewGoEnv(gopath string) *GoEnv {
 	}
 }
 
-func (g *GoEnv) BuildEnv(vals map[string]string) []string {
+func BuildEnv(vals map[string]string) []string {
 	current := os.Environ()
 	newenv := make([]string, 0, len(current))
 	for _, v := range current {
@@ -60,9 +60,8 @@ func (g *GoEnv) Install(root string) {
 	locals := map[string]string{
 		"GOPATH": Join(root, g.gopath),
 	}
-	env := g.BuildEnv(locals)
 
-	cmd.Env = env
+	cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -79,9 +78,8 @@ func (g *GoEnv) Test(root string) {
 	locals := map[string]string{
 		"GOPATH": Join(g.gopath, root),
 	}
-	env := g.BuildEnv(locals)
-
-	cmd.Env = env
+	
+	cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -98,9 +96,8 @@ func (g *GoEnv) Get(pack string) {
 	locals := map[string]string{
 		"GOPATH": g.gopath,
 	}
-	fmt.Printf("GOPATH = %v\n", g.gopath)
-	env := g.BuildEnv(locals)
-	cmd.Env = env
+	//fmt.Printf("GOPATH = %v\n", g.gopath)
+	cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -1,4 +1,4 @@
-package gpk
+package gopack
 
 import (
 	"testing"
