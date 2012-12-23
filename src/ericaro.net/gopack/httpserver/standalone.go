@@ -2,14 +2,14 @@ package httpserver
 
 import (
 	"log"
-	"ericaro.net/gpk"
+	"ericaro.net/gopack"
 	"net/http"
 	"time"
 	"encoding/json"
 )
 
 type StandaloneBackendServer struct {
-	Local  gpk.LocalRepository // handles the real operations
+	Local  gopack.LocalRepository // handles the real operations
 	server http.Server
 }
 
@@ -33,12 +33,12 @@ func (s *StandaloneBackendServer) Debugf(format string, args ...interface{}){
 	
 
 //Contains return true if the server contains the ProjectID
-func (s *StandaloneBackendServer) Receive(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error) {
+func (s *StandaloneBackendServer) Receive(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error) {
 	_, err = s.Local.Install(r.Body)
 	return
 }
 
-func (s *StandaloneBackendServer) Send(id gpk.ProjectID, w http.ResponseWriter, r *http.Request) {
+func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
 	
 	p, err := s.Local.FindPackage(id)
 	if err != nil {
@@ -49,14 +49,14 @@ func (s *StandaloneBackendServer) Send(id gpk.ProjectID, w http.ResponseWriter, 
 	return
 }
 
-func (s *StandaloneBackendServer) Newer(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) {
+func (s *StandaloneBackendServer) Newer(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) {
 	p, err := s.Local.FindPackage(id)
 	if err != nil || p == nil || !p.Timestamp().After(timestamp) {
 		http.NotFound(w, r)
 		return
 	}
 }
-func (s *StandaloneBackendServer) CanPush(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) {
+func (s *StandaloneBackendServer) CanPush(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) {
 	p, err := s.Local.FindPackage(id)
 	var canpush bool
 	if err != nil {

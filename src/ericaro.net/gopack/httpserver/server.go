@@ -1,7 +1,7 @@
 package httpserver
 
 import (
-	"ericaro.net/gpk"
+	"ericaro.net/gopack"
 	"net/http"
 	"time"
 )
@@ -12,11 +12,11 @@ import (
 type BackendServer interface {
 	Debugf(format string, args ...interface{})
 	//Contains return true if the server contains the ProjectID
-	Send(id gpk.ProjectID, w http.ResponseWriter, r *http.Request)
+	Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request)
 	
-	CanPush(id gpk.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
-	Newer(id gpk.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
-	Receive(id gpk.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error)
+	CanPush(id gopack.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
+	Newer(id gopack.ProjectID,timestamp time.Time,  w http.ResponseWriter, r *http.Request) 
+	Receive(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error)
 	SearchPackage(search string, w http.ResponseWriter, r *http.Request)
 	
 }
@@ -31,11 +31,11 @@ func Receive(s BackendServer, w http.ResponseWriter, r *http.Request) {
 	// identify the package
 	vals := r.URL.Query()
 	name := vals.Get("n") // todo validate the syntax
-	version, _ := gpk.ParseVersion(vals.Get("v"))
+	version, _ := gopack.ParseVersion(vals.Get("v"))
 	timestamp, _ := time.Parse(time.ANSIC, vals.Get("t"))
 
 	// try to get the package if it already exists
-	pr := gpk.NewProjectID(name, version)
+	pr := gopack.NewProjectID(name, version)
 	// it's ok to create it
 
 	err := s.Receive(pr, timestamp, w, r) // create and fill the blob
@@ -50,27 +50,27 @@ func Receive(s BackendServer, w http.ResponseWriter, r *http.Request) {
 
 func Newer(s BackendServer, w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("n")
-	version, _ := gpk.ParseVersion(r.FormValue("v"))
+	version, _ := gopack.ParseVersion(r.FormValue("v"))
 	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
 
 	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := gpk.NewProjectID(name, version)
+	pr := gopack.NewProjectID(name, version)
 	s.Newer(pr, timestamp,  w, r)
 
 }
 func CanPush(s BackendServer, w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("n")
-	version, _ := gpk.ParseVersion(r.FormValue("v"))
+	version, _ := gopack.ParseVersion(r.FormValue("v"))
 	timestamp, _ := time.Parse(time.ANSIC, r.FormValue("t"))
 
 	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := gpk.NewProjectID(name, version)
+	pr := gopack.NewProjectID(name, version)
 	s.CanPush(pr, timestamp,  w, r)
 
 }
@@ -88,12 +88,12 @@ func Send(s BackendServer, w http.ResponseWriter, r *http.Request) {
 
 	s.Debugf("Receiving %s  %s \n", r.FormValue("n"), r.FormValue("v"))
 	name := r.FormValue("n")
-	version, _ := gpk.ParseVersion(r.FormValue("v"))
+	version, _ := gopack.ParseVersion(r.FormValue("v"))
 	if name == "" {
 		http.NotFound(w, r)
 		return
 	}
-	pr := gpk.NewProjectID(name, version)
+	pr := gopack.NewProjectID(name, version)
 	
 	s.Send(pr, w, r)
 	return

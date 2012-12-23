@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	. "ericaro.net/gpk"
+	. "ericaro.net/gopack"
 	"flag"
 	"fmt"
 	"os"

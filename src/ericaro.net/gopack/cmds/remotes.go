@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	. "ericaro.net/gpk"
-	"ericaro.net/gpk/httpserver"
+	. "ericaro.net/gopack"
+	"ericaro.net/gopack/httpserver"
 	"fmt"
 )
 

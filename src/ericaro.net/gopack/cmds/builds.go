@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	. "ericaro.net/gpk"
-	"ericaro.net/gpk/gocmd"
+	. "ericaro.net/gopack"
+	"ericaro.net/gopack/gocmd"
 	"fmt"
 )
 

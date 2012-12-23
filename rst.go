@@ -1,8 +1,8 @@
 package main
 
 import (
-	. "ericaro.net/gpk"
-	"ericaro.net/gpk/cmds"
+	. "ericaro.net/gopack"
+	"ericaro.net/gopack/cmds"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +16,21 @@ import (
 func Rst2Man(root, src, dst string) {
 
 	cmd := exec.Command("rst2man", src, dst)
+
+	//cmd.Env = BuildEnv(locals)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = root // absolute path of the project
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+}
+
+func Rst2Man(root, src, dst string) {
+
+	cmd := exec.Command("rst2html","",  src, dst)
 
 	//cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin

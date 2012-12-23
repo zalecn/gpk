@@ -1,7 +1,7 @@
 package main 
 
 import (
-	"ericaro.net/gpk/cmds"
+	"ericaro.net/gopack/cmds"
 )
 
 func main() {
