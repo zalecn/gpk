@@ -42,7 +42,7 @@ func RegisterRemoteRepositoryFactory(urlprotocol string, xtor RemoteConstructor)
 }
 
 func NewRemoteRepository(name string, u url.URL) RemoteRepository {
-	//fmt.Printf("new remote %s %v\n", name, u.String())
+	//fmt.Printf("new remote %s %v. scheme factory = %s\n", name, u.String(), RemoteRepositoryFactory[u.Scheme])
 	return RemoteRepositoryFactory[u.Scheme](name, u)
 }
 

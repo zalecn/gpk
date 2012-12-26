@@ -18,6 +18,25 @@ const (
 	GpkFile = ".gpk"
 )
 
+type LicenseSet []License
+type License struct {
+	FullName, Alias string
+}
+var (
+	Licenses LicenseSet = ([]License{
+	License{ "Apache License 2.0"          , "ASF" }, 
+	License{ "Eclipse Public License 1.0"  , "EPL" },
+	License{ "GNU GPL v2"                  , "GPL2"},
+	License{ "GNU GPL v3"                  , "GPL3"},
+	License{ "GNU Lesser GPL"              , "LGPL"},
+	License{ "MIT License"                 , "MIT" },
+	License{ "Mozilla Public License 1.1"  , "MPL" },
+	License{ "New BSD License"             , "BSD" },
+	License{ "Other Open Source"           , "OOS" },
+	License{ "Other Closed Source"         , "OCS" },
+	})
+)
+
 var (
 	CentralUrl = url.URL{
 		Scheme: "http",
@@ -26,8 +45,32 @@ var (
 	Central RemoteRepository
 )
 
-func init() {
-	Central = NewRemoteRepository("central", CentralUrl)
+
+func (set LicenseSet) String() (licenses string) {
+	licenses = ""	
+	for _,l:= range set {
+		licenses += fmt.Sprintf("%s\n", l.FullName)
+	}
+	return licenses
+}
+
+func (licenses LicenseSet) Get(fullname string) (lic *License, err error){
+	for i := range licenses {
+		if licenses[i].FullName == fullname {
+			lic = &licenses[i]
+			return
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("Unknown or unsupported license %s", fullname))
+}
+func (licenses LicenseSet) GetAlias(alias string) (lic *License, err error){
+	for i := range licenses {
+		if licenses[i].Alias == alias {
+			lic = &licenses[i]
+			return
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("Unknown or unsupported license's alias %s", alias))
 }
 
 type ProjectID struct {
@@ -39,6 +82,7 @@ type Project struct {
 	workingDir   string      // transient workding directory aboslute path
 	name         string      // package name
 	dependencies []ProjectID // contains the current project's dependencies
+	license      License      // one of the predefined licenses
 	// TO be added build time , and test dependencies
 }
 type Package struct {
@@ -111,6 +155,10 @@ func (p *Package) InstallDir() string {
 func (p *Project) Name() string {
 	return p.name
 }
+func (p *Project) License() License {
+	return p.license
+}
+
 func (p *Package) Name() string {
 	return p.self.name
 }
@@ -131,6 +179,14 @@ func (p *Project) SetWorkingDir(pwd string) {
 func (p *Project) SetName(name string) {
 	p.name = name
 }
+
+func (p *Project) SetLicense(license License) {
+	if _,err := Licenses.Get(license.FullName) ; err != nil {
+		panic(err)
+	}
+	p.license = license
+}
+
 
 func (p *Project) Dependencies() []ProjectID {
 	return p.dependencies[:]
@@ -296,9 +352,10 @@ func (p *Package) Pack(in io.Writer) (err error) {
 	return
 }
 
-type ProjectFile struct {
+type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
 	Name         string
 	Dependencies []ProjectIDFile
+	License      string // one of the value in the restricted list
 }
 type PackageFile struct {
 	Self      ProjectFile
@@ -347,10 +404,9 @@ func DecodeProject(r io.Reader, p *Project) (err error) {
 	if err != nil {
 		return
 	}
-	DecodeProjectFile(*pf, p)
+	err = DecodeProjectFile(*pf, p)
 	return
 }
-
 
 func EncodeLocalRepository(w io.Writer, p LocalRepository) (err error) {
 	pf := EncodeLocalRepositoryFile(p)
@@ -360,7 +416,7 @@ func EncodeLocalRepository(w io.Writer, p LocalRepository) (err error) {
 }
 
 func DecodeLocalRepository(r io.Reader, p *LocalRepository) (err error) {
-	pf := new(LocalRepositoryFile )
+	pf := new(LocalRepositoryFile)
 	err = json.NewDecoder(r).Decode(pf)
 	if err != nil {
 		return
@@ -390,12 +446,18 @@ func DecodeLocalRepositoryFile(pf LocalRepositoryFile, p *LocalRepository) {
 		p.RemoteAdd(DecodeRemoteFile(d))
 	}
 }
-func DecodeProjectFile(pf ProjectFile, p *Project) {
+func DecodeProjectFile(pf ProjectFile, p *Project) (err error){
 	p.name = pf.Name
 	for _, d := range pf.Dependencies {
 		v, _ := ParseVersion(d.Version)
 		p.AppendDependency(NewProjectID(d.Name, v))
 	}
+	if l,e:= Licenses.Get(pf.License); e!= nil {
+		err = errors.New(fmt.Sprintf(`Illegal license: "%s" was expecting one of: %s`, pf.License, Licenses) )
+	} else {
+		p.license = *l
+	}
+	return
 }
 
 func DecodePackageFile(pf PackageFile, p *Package) {
@@ -430,12 +492,13 @@ func EncodeProjectFile(p Project) *ProjectFile {
 	return &ProjectFile{
 		Name:         p.name,
 		Dependencies: dep,
+		License:      p.license.FullName,
 	}
 }
 func EncodeLocalRepositoryFile(p LocalRepository) *LocalRepositoryFile {
 	dep := make([]RemoteFile, 0, len(p.remotes))
 	for _, d := range p.remotes {
-		dep = append(dep, *EncodeRemoteFile(d) )
+		dep = append(dep, *EncodeRemoteFile(d))
 	}
 
 	return &LocalRepositoryFile{

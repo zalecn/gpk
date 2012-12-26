@@ -20,6 +20,7 @@ func init() {
 	RegisterRemoteRepositoryFactory("http", http)
 	RegisterRemoteRepositoryFactory("https", http)
 	
+	Central = NewRemoteRepository("central", CentralUrl)
 }
 
 // contains a remote repo based on http
