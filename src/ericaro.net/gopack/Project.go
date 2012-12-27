@@ -23,7 +23,7 @@ func ReadProject() (p *Project, err error) {
 }
 
 //Write project  info to where it belongs (project holds working dir info)
-func (p Project) Write() (err error) {
+func (p *Project) Write() (err error) {
 	dst := filepath.Join(p.workingDir, GpkFile)
 	err = JsonWriteFile(dst, p)
 	return

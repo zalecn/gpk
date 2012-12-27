@@ -23,6 +23,17 @@ type Version struct {
 	pre, build          string
 }
 
+
+func NewVersion(major, minor, patch uint32, pre, build string) *Version {
+	return &Version{
+		major:major,
+		minor: minor,
+		patch: patch,
+		pre: pre,
+		build: build,
+	}
+}
+
 // TODO add tests and methods to this struct
 // TODO add persistence format control ( string back and forth is a good objective)
 

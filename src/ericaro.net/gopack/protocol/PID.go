@@ -29,7 +29,7 @@ func (pid *PID) InParameter(v *url.Values) {
 		v.Set("t", pid.Timestamp.Format(time.ANSIC))
 	}
 	if pid.Token != nil {
-		v.Set("k", pid.Token.Format())
+		v.Set("k", pid.Token.FormatURL())
 	}
 }
 
@@ -43,7 +43,7 @@ func FromParameter(v *url.Values) (pid *PID, err error) {
 	}
 
 	t, err := time.Parse(time.ANSIC, v.Get("t"))
-	k, err := DecodeString(v.Get("k"))
+	k, err := ParseURLToken (v.Get("k"))
 
 	pid.Timestamp = &t
 	pid.Token = k

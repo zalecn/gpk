@@ -5,39 +5,32 @@ import (
 	"ericaro.net/gopack/protocol"
 	"io"
 	"net/url"
+	"fmt"
 	//"path/filepath"
 )
 
+
 func init() { // register this as a handler for file:/// url scheme
-	file := func(name string, u url.URL) protocol.Client {
-		f, _ := NewFileClient(name, u)
-		return f
-	}
-	protocol.RegisterClient("file", file)
+	protocol.RegisterClient("file", NewFileClient)
 }
 
 //FileClient act as a remote repository for a 
 type FileClient struct {
 	repo LocalRepository // contains a local repo
-	name string
+	protocol.BaseClient
 }
 
-func NewFileClient(name string, u url.URL) (r *FileClient, err error) {
+func NewFileClient(name string, u url.URL, token *protocol.Token) (r protocol.Client, err error) {
 	loc, err := NewLocalRepository(u.Path)
+	if err != nil {
+		err = fmt.Errorf("Invalid Remote Repository \"%s\"\n    ↳ %s is not a valid repository.\n    ↳ %s", name, u.String(), err)
+	}
 	r = &FileClient{
 		repo: *loc,
-		name: name,
+		BaseClient: *protocol.NewBaseClient(name, u, token),
 	}
 	return
 
-}
-
-func (r FileClient) Name() string { return r.name }
-func (r FileClient) Path() url.URL {
-	return url.URL{
-		Scheme: "file",
-		Path:   r.repo.Root(),
-	}
 }
 
 func (c *FileClient) Push(pid protocol.PID, r io.Reader) (err error) {

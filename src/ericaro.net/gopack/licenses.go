@@ -5,10 +5,22 @@ import (
 	"fmt"
 )
 
-type LicenseSet []License
 type License struct {
 	FullName, Alias string
 }
+
+//IsValid return true if the license belongs to one of the preset license
+func (l License) IsValid() bool {
+	r, err := Licenses.Get(l.FullName)
+	return err == nil && r.Alias == l.Alias
+}
+//IsOSS return true if the license belongs to one of the preset OSS license
+func (l License) IsOSS() bool {
+	return l.IsValid( ) && l.Alias != "OCS"
+}
+
+
+type LicenseSet []License
 
 var (
 	Licenses LicenseSet = ([]License{

@@ -29,6 +29,8 @@ var (
 	TitleStyle = PFormat{TERM_BRIGHT, COLOR_DEFAULT, COLOR_DEFAULT}
 	ShortStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
 	ErrorStyle = PFormat{TERM_NULL, COLOR_RED, COLOR_DEFAULT}
+	SuccessStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
+	
 )
 
 type PFormat struct {

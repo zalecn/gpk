@@ -5,8 +5,7 @@ import (
 	"net/url"
 )
 
-
-type ClientConstructor func(name string, u url.URL) Client
+type ClientConstructor func(name string, u url.URL, token *Token) (c Client, err error)
 
 var ClientFactory map[string]ClientConstructor // factory
 func RegisterClient(urlprotocol string, xtor ClientConstructor) {
@@ -19,11 +18,10 @@ func RegisterClient(urlprotocol string, xtor ClientConstructor) {
 	ClientFactory[urlprotocol] = xtor
 }
 
-func NewClient(name string, u url.URL) Client {
+func NewClient(name string, u url.URL, token *Token) (Client, error) {
 	//fmt.Printf("new remote %s %v. scheme factory = %s\n", name, u.String(), RemoteRepositoryFactory[u.Scheme])
-	return ClientFactory[u.Scheme](name, u)
+	return ClientFactory[u.Scheme](name, u, token)
 }
-
 
 //Client is any kind of client that can talk to a remote repository
 type Client interface {
@@ -32,5 +30,25 @@ type Client interface {
 	Search(query string, start int) (result []PID)
 	Name() string
 	Path() url.URL
-	
+	Token() *Token
 }
+
+type BaseClient struct {
+	url url.URL
+	name  string
+	token *Token
+}
+
+func NewBaseClient(name string, u url.URL, token *Token) (r *BaseClient) {
+	r = &BaseClient{
+		name: name,
+		token: token,
+		url: u,
+	}
+	return
+
+}
+
+func (r BaseClient) Token() *Token { return r.token }
+func (r BaseClient) Name() string { return r.name }
+func (r BaseClient) Path() url.URL { return r.url }

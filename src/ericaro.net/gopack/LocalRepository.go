@@ -3,7 +3,6 @@ package gopack
 import (
 	"ericaro.net/gopack/protocol"
 	. "ericaro.net/gopack/semver"
-
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -23,20 +22,16 @@ const (
 type LocalRepository struct {
 	root    string // absolute path to the repo, this must be a filesystem writable path.
 	remotes []protocol.Client
+	
 }
 
 func (p LocalRepository) Write() (err error) {
 	dst := filepath.Join(p.root, GpkrepositoryFile)
-	err = JsonWriteFile(dst, p)
+	fmt.Printf("writing down the local repo metadata to %s\n", dst)
+	err = JsonWriteFile(dst, &p)
 	return err
 }
 
-// features:
-// xtor (based on user/project config)
-// search project
-//install project as package
-// computes the local gopath (yes its part of the local repo, gopath always point to the local repo)
-// goget compatibility
 
 func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	root, err = filepath.Abs(filepath.Clean(root))
@@ -48,6 +43,7 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	r = &LocalRepository{
 		root:    root,
 		remotes: make([]protocol.Client, 0),
+		
 	}
 	err = JsonReadFile(dst, r)
 	return
@@ -56,6 +52,8 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 func (r *LocalRepository) Remotes() []protocol.Client {
 	return r.remotes
 }
+
+
 
 func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error) {
 	for _, re := range r.remotes {
@@ -136,6 +134,7 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	//makes the copy
 	walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
 	p.self.workingDir = dst
+	fmt.Printf("new package %#v\n", p)
 	p.Write()
 	return
 }
@@ -307,6 +306,7 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 	type RemoteFile struct {
 		Name string
 		Url  string
+		Token string
 	}
 
 	type LocalRepositoryFile struct {
@@ -318,7 +318,11 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 	for _, r := range pf.Remotes {
 		ur, err := url.Parse(r.Url)
 		if err != nil {return err}
-		p.RemoteAdd(protocol.NewClient(r.Name, *ur ))
+		token, err := protocol.ParseStdToken(r.Token)
+		if err != nil {return err}
+		client, err := protocol.NewClient(r.Name, *ur, token )
+		if err != nil {continue}
+		p.RemoteAdd(client)
 	}
 	return
 }
@@ -327,6 +331,7 @@ func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 	type RemoteFile struct {
 		Name string
 		Url  string
+		Token string
 	}
 
 	type LocalRepositoryFile struct {
@@ -342,6 +347,10 @@ func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 		pf.Remotes[i] = RemoteFile{
 			Name : pr.Name(),
 			Url : u.String(),
+		}
+		tok := pr.Token()
+		if tok != nil {
+			pf.Remotes[i].Token = tok.FormatStd()
 		}
 	}
 	return json.Marshal(pf)

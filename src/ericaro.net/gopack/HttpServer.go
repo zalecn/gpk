@@ -29,17 +29,15 @@ func (s *HttpServer) Debugf(format string, args ...interface{}) {
 }
 
 //Contains return true if the server contains the ProjectID
-func (s *HttpServer) Receive(pid protocol.PID, r io.ReadCloser) (pe protocol.ProtocolError , err error)            {
+func (s *HttpServer) Receive(pid protocol.PID, r io.ReadCloser) (err error)            {
 //func (s *HttpServer) Receive(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error) {
 	// pid is for sanity check before receiving the file, here in a standalone server I don't do any sanity check
-	pe = protocol.StatusOK
 	_, err = s.Local.Install(r)
 	return
 }
 
-func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (pe protocol.ProtocolError, err error)                    {
+func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (err error)                    {
 //func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
-	pe = protocol.StatusOK
 	id := NewProjectID(pid.Name,pid.Version)
 	p, err := s.Local.FindPackage(id)
 	if err != nil {

@@ -4,7 +4,6 @@ package protocol
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -17,24 +16,32 @@ const (
 	SEARCH = "search"
 )
 
-type ProtocolError int
+type ProtocolError struct {
+	Message string
+	Code int
+}
+func (p *ProtocolError) Error() string {return p.Message}
+
 
 var (
-	StatusForbidden = ProtocolError(http.StatusForbidden)
-	StatusOK        = ProtocolError(http.StatusOK)
+	StatusForbidden = &ProtocolError{"Forbidden Operation", http.StatusForbidden}
+	StatusIdentityMismatch = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
+	StatusCannotOverwrite = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
+	StatusMissingDependency = &ProtocolError{"Missing Dependency", http.StatusPartialContent}
 )
 
-func (p *ProtocolError) Error() string {
-	switch *p {
-	case StatusForbidden:
-		return "Forbidden Operation"
+func ErrorCode( err error ) int {
+	switch e:= err.(type) {
+		case *ProtocolError:
+			return e.Code
 	}
-	return fmt.Sprintf("Unknown error code: %d", p)
+	return http.StatusInternalServerError
 }
 
+
 type Server interface {
-	Receive(pid PID, r io.ReadCloser) (ProtocolError, error)
-	Serve(pid PID, w io.Writer) (ProtocolError, error)
+	Receive(pid PID, r io.ReadCloser) (error)
+	Serve(pid PID, w io.Writer) (error)
 	Search(query string, start int) ([]PID, error)
 	Debugf(format string, args ...interface{})
 }
@@ -68,11 +75,9 @@ func servePush(s Server, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	pe, err := s.Receive(*pid, r.Body) // create and fill the blob
+	err = s.Receive(*pid, r.Body) // create and fill the blob
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(int(pe))
+		http.Error(w, err.Error(), ErrorCode(err))
 	}
 	// can pass the reason as body response)
 	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -91,11 +96,9 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pe, err := s.Serve(*pid, w)
+	err = s.Serve(*pid, w)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(int(pe))
+		http.Error(w, err.Error(), ErrorCode(err) )
 	}
 	return
 }

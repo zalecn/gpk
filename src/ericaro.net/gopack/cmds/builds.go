@@ -137,3 +137,6 @@ func (c *Command) Test() {
 	goEnv := gocmd.NewGoEnv(gopath)
 	goEnv.Test(c.Project.WorkingDir())
 }
+
+
+

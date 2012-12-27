@@ -37,7 +37,7 @@ func (p *Package) Timestamp() time.Time {
 }
 
 //Write package  info to where it belongs (package holds working dir info)
-func (p Package) Write() (err error) {
+func (p *Package) Write() (err error) {
 	dst := filepath.Join(p.self.workingDir, GpkFile)
 	err = JsonWriteFile(dst, p)
 	return 
@@ -50,6 +50,14 @@ func (p *Package) InstallDir() string {
 
 func (p *Package) Name() string {
 	return p.self.name
+}
+func (p *Package) License() License {
+	return p.self.License()
+}
+
+
+func (p *Package) Dependencies() []ProjectID {
+	return p.self.Dependencies()
 }
 func (p *Package) Version() Version {
 	return p.version
@@ -133,14 +141,14 @@ func (p *Package) Pack(w io.Writer) (err error) {
 
 func (p *Package) UnmarshalJSON(data []byte) (err error) {
 	type PackageFile struct {
-		Self      Project
+		Self      *Project
 		Version   string
 		Timestamp time.Time
 	}
 	var pf PackageFile
 	json.Unmarshal(data, &pf)
 
-	p.self = pf.Self
+	p.self = *pf.Self
 	p.timestamp = pf.Timestamp
 	v, _ := ParseVersion(pf.Version)
 	p.version = v
@@ -149,12 +157,12 @@ func (p *Package) UnmarshalJSON(data []byte) (err error) {
 
 func (p *Package) MarshalJSON() ([]byte, error) {
 	type PackageFile struct {
-		Self      Project
+		Self      *Project
 		Version   string
 		Timestamp time.Time
 	}
 	pf := PackageFile{
-		Self:         p.self,
+		Self:         &p.self,
 		Timestamp: p.timestamp,
 		Version:      p.version.String(),
 	}

@@ -189,7 +189,13 @@ func (c *Command) Status() {
 	fmt.Printf("    Remotes          :\n")
 	for _, r := range c.Repository.Remotes() {
 		u := r.Path()
-		fmt.Printf("        %-40s %v\n", r.Name(), u.String())
+		tr := "" // str repr of the token
+		t:= r.Token() 
+		if t != nil { // applies only if not nul
+		tr= t.FormatStd()
+		}
+		
+		fmt.Printf("        %-40s %-40s %s\n", r.Name(), u.String(), tr)
 	}
 
 }
@@ -271,7 +277,7 @@ func (c *Command) Search() {
 
 func (c *Command) AddRemote() {
 
-	if len(c.Flag.Args()) != 2 {
+	if len(c.Flag.Args()) < 2 || len(c.Flag.Args())>3{
 		fmt.Printf("Illegal arguments\n")
 		return
 	}
@@ -281,7 +287,20 @@ func (c *Command) AddRemote() {
 		ErrorStyle.Printf("Invalid URL passed as a remote Repository.\n    Caused by %s\n", err)
 		return
 	}
-	c.Repository.RemoteAdd(protocol.NewClient(name, *u))
+	var token *protocol.Token
+	if len(c.Flag.Args()) >=3 {
+		token, err = protocol.ParseStdToken(c.Flag.Arg(2))
+		if err != nil {
+			fmt.Printf("Invalid token syntax, please enter a valid token base64 RFC 4648 encoded array of bytes.\n")
+			return
+		}
+	}
+	client, err := protocol.NewClient(name, *u, token )
+	if err != nil {
+		fmt.Printf("Invalid Client:\n    ↳ %s\n", err)
+	}
+	fmt.Printf("adding new remote\n")
+	c.Repository.RemoteAdd(client)
 	c.Repository.Write()
 }
 

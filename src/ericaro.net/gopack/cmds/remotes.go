@@ -66,7 +66,7 @@ func (c *Command) Serve() {
 //var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
 
 func (c *Command) Push() {
-
+	//fmt.Printf("helloooooooooooooooooooo\n\n")
 	rem := c.Flag.Arg(0)
 	remote, err := c.Repository.Remote(rem)
 	if err != nil {
@@ -92,14 +92,24 @@ func (c *Command) Push() {
 		// TODO as soon as I've got some search capability display similar results
 		return
 	}
-
+	tm := pkg.Timestamp()
 	pid := protocol.PID{
 		Name:    c.Flag.Arg(1),
 		Version: version,
+		Token: remote.Token(),
+		Timestamp: &tm,
 	}
+	// parse locally and fill a buffer
 	buf := new(bytes.Buffer)
 	pkg.Pack(buf)
-	remote.Push(pid, buf)
+	// push the buffer
+	err = remote.Push(pid, buf)
+	if err != nil {
+		ErrorStyle.Printf("Remote Error %s\n", err)
+		// TODO as soon as I've got some search capability display similar results
+		return
+	}
+	SuccessStyle.Printf("Success\n")
 }
 
 func (c *Command) Get() {
