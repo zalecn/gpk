@@ -1,7 +1,11 @@
 package gopack
 
 import (
+	"ericaro.net/gopack/protocol"
+	. "ericaro.net/gopack/semver"
+
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,49 +20,14 @@ const (
 	GpkrepositoryFile = ".gpkrepository"
 )
 
-//RemoteRepository is any code that can act as a remote. usually a project has a chain of remote repository where to look
-type RemoteRepository interface {
-	CheckPackageCanPush(p *Package) (newer bool, err error)
-	CheckPackageUpdate(p *Package) (newer bool, err error)
-	ReadPackage(p ProjectID) (r io.Reader, err error)
-	UploadPackage(p *Package) (err error)
-	SearchPackage(search string) ([]string)
-	Name() string
-	Path() url.URL
-	// TODO provide some "reader" from the remote, so local can copy it down
-}
-
-type RemoteConstructor func(name string, u url.URL) RemoteRepository
-
-var RemoteRepositoryFactory map[string]RemoteConstructor // factory
-func RegisterRemoteRepositoryFactory(urlprotocol string, xtor RemoteConstructor) {
-	if RemoteRepositoryFactory == nil {
-		RemoteRepositoryFactory = make(map[string]RemoteConstructor)
-	}
-	if _, ok := RemoteRepositoryFactory[urlprotocol]; ok {
-		panic("double remote repository definition for " + urlprotocol + "\n")
-	}
-	RemoteRepositoryFactory[urlprotocol] = xtor
-}
-
-func NewRemoteRepository(name string, u url.URL) RemoteRepository {
-	//fmt.Printf("new remote %s %v. scheme factory = %s\n", name, u.String(), RemoteRepositoryFactory[u.Scheme])
-	return RemoteRepositoryFactory[u.Scheme](name, u)
-}
-
 type LocalRepository struct {
 	root    string // absolute path to the repo, this must be a filesystem writable path.
-	remotes []RemoteRepository
+	remotes []protocol.Client
 }
 
 func (p LocalRepository) Write() (err error) {
 	dst := filepath.Join(p.root, GpkrepositoryFile)
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	err = EncodeLocalRepository(f, p)
+	err = JsonWriteFile(dst, p)
 	return err
 }
 
@@ -71,29 +40,24 @@ func (p LocalRepository) Write() (err error) {
 
 func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	root, err = filepath.Abs(filepath.Clean(root))
+	dst := filepath.Join(root, GpkrepositoryFile)
 	if err != nil {
 		return
 	}
 
 	r = &LocalRepository{
 		root:    root,
-		remotes: []RemoteRepository{Central},
+		remotes: make([]protocol.Client, 0),
 	}
-
-	f, err2 := os.Open(filepath.Join(root, GpkrepositoryFile))
-	if err2 != nil {
-		return
-	}
-	defer f.Close()
-	err = DecodeLocalRepository(f, r)
+	err = JsonReadFile(dst, r)
 	return
 }
 
-func (r *LocalRepository) Remotes() []RemoteRepository {
+func (r *LocalRepository) Remotes() []protocol.Client {
 	return r.remotes
 }
 
-func (r *LocalRepository) Remote(name string) (remote RemoteRepository, err error) {
+func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error) {
 	for _, re := range r.remotes {
 		if strings.EqualFold(name, re.Name()) {
 			return re, nil
@@ -102,7 +66,7 @@ func (r *LocalRepository) Remote(name string) (remote RemoteRepository, err erro
 	return nil, errors.New("Missing remote")
 }
 
-func (p *LocalRepository) RemoteAdd(remote RemoteRepository) (err error) {
+func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
 	for _, r := range p.remotes {
 		if strings.EqualFold(remote.Name(), r.Name()) {
 			return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
@@ -115,7 +79,7 @@ func (p *LocalRepository) RemoteAdd(remote RemoteRepository) (err error) {
 func (p *LocalRepository) RemoteRemove(name string) (err error) {
 	for i, r := range p.remotes {
 		if strings.EqualFold(name, r.Name()) {
-			tmp := make([]RemoteRepository, 0, len(p.remotes))
+			tmp := make([]protocol.Client, 0, len(p.remotes))
 			if i > 0 {
 				tmp = append(tmp, p.remotes[0:i]...)
 			}
@@ -177,17 +141,26 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 }
 
 // search for package starting with name, and return them
-func (r *LocalRepository) SearchPackage(search string) (result []string) {
+func (r *LocalRepository) Search(search string, start int) (result []protocol.PID) {
+	//fmt.Printf("q: %s start=%d\n", search, start)
 	sp := filepath.Join(r.root, search)
 	sd := filepath.Dir(sp)
 	base := filepath.Base(sp)
-	
-	results := make([]string, 100)
-	i:=0
-	handler := func(srcpath string) {
-		//fmt.Printf("found  %s %d\n", srcpath, i)
-		results[i], _= filepath.Rel(r.root, srcpath)
+	M := 10
+	results := make([]protocol.PID, M)
+	i := 0
+	handler := func(srcpath string) bool {
+		if i >= start {
+			path, _ := filepath.Rel(r.root, srcpath)
+			pack := filepath.Dir(path)
+			v, _ := ParseVersion(filepath.Base(path))
+			results[i-start] = protocol.PID{
+				Name:    pack,
+				Version: v,
+			}
+		}
 		i++
+		return i-start < M
 	}
 	PackageWalker(sd, base, handler)
 	//fmt.Printf("found  %s\n", results[:i])
@@ -211,14 +184,14 @@ func (r *LocalRepository) ResolveDependencies(p *Project, offline, update bool) 
 }
 
 //findProjectDependencies private recursive version
-func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRepository, dependencies map[ProjectID]*Package, dependencyList *[]*Package, offline, update bool) (err error) {
+func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol.Client, dependencies map[ProjectID]*Package, dependencyList *[]*Package, offline, update bool) (err error) {
 	for _, d := range p.dependencies {
 		if dependencies[d] == nil { // it's a new dependencies
 			prj, err := r.FindPackage(d)
 			if !offline {
 				if err != nil { // missing dependency in local repo, search remote
 
-					prj, err = remoteHandler(remotes, func(remote RemoteRepository, suc chan *Package, fail chan error) (p *Package, err error) {
+					prj, err = remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
 						prj, err = r.DownloadPackage(remote, d)
 						fail <- err
 						if err == nil {
@@ -229,13 +202,11 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRe
 
 				} else if update {
 					// try to get a newer version into prjnew
-					prjnew, err := remoteHandler(remotes, func(remote RemoteRepository, suc chan *Package, fail chan error) (p *Package, err error) {
-						if newer, _ := remote.CheckPackageUpdate(prj); newer {
-							prj, err = r.DownloadPackage(remote, d)
-							fail <- err
-							if err == nil {
-								suc <- prj
-							}
+					prjnew, err := remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
+						prj, err = r.DownloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
+						fail <- err
+						if err == nil {
+							suc <- prj
 						}
 						return
 					})
@@ -261,7 +232,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []RemoteRe
 }
 
 //remoteHandler process a function for every remote
-func remoteHandler(remotes []RemoteRepository, handler func(r RemoteRepository, success chan *Package, failure chan error) (p *Package, err error)) (p *Package, err error) {
+func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, success chan *Package, failure chan error) (p *Package, err error)) (p *Package, err error) {
 	success := make(chan *Package)
 	failure := make(chan error)
 
@@ -282,8 +253,13 @@ func remoteHandler(remotes []RemoteRepository, handler func(r RemoteRepository, 
 	return
 }
 
-func (r *LocalRepository) DownloadPackage(remote RemoteRepository, p ProjectID) (prj *Package, err error) {
-	reader, err := remote.ReadPackage(p)
+func (r *LocalRepository) DownloadPackage(remote protocol.Client, p ProjectID) (prj *Package, err error) {
+
+	reader, err := remote.Fetch(protocol.PID{
+		Name:    p.Name(),
+		Version: p.Version(),
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -325,6 +301,50 @@ func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err er
 
 func (r LocalRepository) Root() string {
 	return r.root
+}
+
+func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
+	type RemoteFile struct {
+		Name string
+		Url  string
+	}
+
+	type LocalRepositoryFile struct {
+		Remotes []RemoteFile
+	}
+	var pf LocalRepositoryFile
+	json.Unmarshal(data, &pf)
+
+	for _, r := range pf.Remotes {
+		ur, err := url.Parse(r.Url)
+		if err != nil {return err}
+		p.RemoteAdd(protocol.NewClient(r.Name, *ur ))
+	}
+	return
+}
+
+func (p *LocalRepository) MarshalJSON() ([]byte, error) {
+	type RemoteFile struct {
+		Name string
+		Url  string
+	}
+
+	type LocalRepositoryFile struct {
+		Remotes []RemoteFile
+	}
+	
+	pf := LocalRepositoryFile{
+		Remotes:  make([]RemoteFile, len(p.remotes) ),
+	}
+	for i:= range p.remotes {
+		pr := p.remotes[i]
+		u := pr.Path()
+		pf.Remotes[i] = RemoteFile{
+			Name : pr.Name(),
+			Url : u.String(),
+		}
+	}
+	return json.Marshal(pf)
 }
 
 // add listing capacities (list current version for a given package) 

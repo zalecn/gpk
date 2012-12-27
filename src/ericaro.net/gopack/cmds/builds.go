@@ -3,6 +3,7 @@ package cmds
 import (
 	. "ericaro.net/gopack"
 	"ericaro.net/gopack/gocmd"
+	"ericaro.net/gopack/semver"
 	"fmt"
 )
 
@@ -70,6 +71,7 @@ and then run go test on the whole project.`,
 }
 
 // The flag package provides a default help printer via -h switch
+var compileAllFlag *bool = Compile.Flag.Bool("a", false, "all. Go standard build option. Force rebuilding of packages that are already up-to-date.")
 var compileOfflineFlag *bool = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
 var compileUpdateFlag *bool = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
 
@@ -87,7 +89,7 @@ func (c *Command) Compile() {
 	gopath, err := c.Repository.GoPath(dependencies)
 
 	goEnv := gocmd.NewGoEnv(gopath)
-	goEnv.Install(c.Project.WorkingDir())
+	goEnv.Install(c.Project.WorkingDir(), *compileAllFlag)
 
 }
 
@@ -117,7 +119,7 @@ func (c *Command) Path() {
 }
 
 func (c *Command) Install() {
-	version, _ := ParseVersion(c.Flag.Arg(0))
+	version, _ := semver.ParseVersion(c.Flag.Arg(0))
 	c.Repository.InstallProject(c.Project, version)
 }
 

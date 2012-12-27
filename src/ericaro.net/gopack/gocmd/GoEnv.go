@@ -53,10 +53,14 @@ func Join(path string, elements ...string) string {
 
 }
 
-func (g *GoEnv) Install(root string) {
-
-	cmd := exec.Command("go", "install", "./src/...")
-
+func (g *GoEnv) Install(root string, all bool) {
+	var cmd *exec.Cmd
+	if all{
+	cmd = exec.Command("go", "install", "-a",  "./src/...")
+	} else {
+		cmd = exec.Command("go", "install",  "./src/...")
+	}
+	
 	locals := map[string]string{
 		"GOPATH": Join(root, g.gopath),
 	}
@@ -73,7 +77,7 @@ func (g *GoEnv) Install(root string) {
 
 func (g *GoEnv) Test(root string) {
 
-	cmd := exec.Command("go", "test", "./src/...")
+	cmd := exec.Command("go", "test",  "./src/...")
 
 	locals := map[string]string{
 		"GOPATH": Join(g.gopath, root),

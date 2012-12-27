@@ -2,10 +2,13 @@ package cmds
 
 import (
 	. "ericaro.net/gopack"
+	. "ericaro.net/gopack/semver"
+	"ericaro.net/gopack/protocol"
+	
+	
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 )
 
 func init() {
@@ -231,7 +234,7 @@ var searchRemoteFlag *string = Search.Flag.String("r", "", "Search in the remote
 
 func (c *Command) Search() {
 	search := c.Flag.Arg(0)
-	var result []string
+	var result []protocol.PID
 	if *searchRemoteFlag != "" {
 		rem := *searchRemoteFlag
 		remote, err := c.Repository.Remote(rem)
@@ -245,13 +248,14 @@ func (c *Command) Search() {
 			}
 			return
 		}
-		result = remote.SearchPackage(search)
+		result = remote.Search(search,0)
 	} else {
-		result = c.Repository.SearchPackage(search)
+		result = c.Repository.Search(search,0)
 	}
 
 	pkg := ""
-	for _, v := range result {
+	for _, pid := range result {
+		v := pid.Name
 		if v == pkg { // do not print if not new
 			v = ""
 		} else {
@@ -260,7 +264,7 @@ func (c *Command) Search() {
 
 		fmt.Printf("    %-40s %s\n",
 			v,
-			filepath.Base(v))
+			pid.Version.String())
 	}
 
 }
@@ -277,7 +281,7 @@ func (c *Command) AddRemote() {
 		ErrorStyle.Printf("Invalid URL passed as a remote Repository.\n    Caused by %s\n", err)
 		return
 	}
-	c.Repository.RemoteAdd(NewRemoteRepository(name, *u))
+	c.Repository.RemoteAdd(protocol.NewClient(name, *u))
 	c.Repository.Write()
 }
 

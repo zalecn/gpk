@@ -4,7 +4,6 @@ import (
 	. "ericaro.net/gopack"
 	"flag"
 	"fmt"
-	"os"
 	"os/user"
 	"path/filepath"
 )
@@ -14,8 +13,6 @@ const (
 	GopackageVersion  = "0.0.1" //?
 	DefaultRepository = ".gpkrepository"
 )
-
-
 
 // here are gopackage flags not specific ones
 
@@ -62,25 +59,21 @@ func (c *Command) Help() {
 		return
 	}
 
-
-	
-
-	fmt.Printf("\nusage: %s\n", TitleStyle.Sprintf("gpk %s %s",cmd.Name, cmd.UsageLine) )
-	fmt.Printf("    %s\n", ShortStyle.Sprintf("%s", cmd.Short) )
+	fmt.Printf("\nusage: %s\n", TitleStyle.Sprintf("gpk %s %s", cmd.Name, cmd.UsageLine))
+	fmt.Printf("    %s\n", ShortStyle.Sprintf("%s", cmd.Short))
 	fmt.Printf("where:\n")
 	TitleStyle.Printf("    %-10s %-20s %s\n", "option", "default", "usage")
 	cmd.Flag.VisitAll(printFlag)
 	fmt.Print(cmd.Long)
 }
 
-func printFlag( f *flag.Flag ) {
+func printFlag(f *flag.Flag) {
 	fmt.Printf("    -%-10s %-20s %s\n", f.Name, f.DefValue, f.Usage)
-	
+
 }
 
-
 func PrintGlobalUsage() {
-	TitleStyle.Printf("\nGopack is a software project management tool for Golang.\n") 
+	TitleStyle.Printf("\nGopack is a software project management tool for Golang.\n")
 	fmt.Printf("\nusage: ")
 	TitleStyle.Printf("%s [general options] <command> [options]  \n", Cmd)
 
@@ -98,16 +91,14 @@ func PrintGlobalUsage() {
 	}
 }
 
-
 func Gopack() {
 
-	
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
 		fmt.Println("Version:", GopackageVersion)
 		return
 	}
-	if len(flag.Args() ) == 0 {
+	if len(flag.Args()) == 0 {
 		PrintGlobalUsage()
 		return
 	}
@@ -120,18 +111,25 @@ func Gopack() {
 	}
 
 	r, err := NewDefaultRepository()
-
-	handleError(err)
-
+	if err != nil {
+		fmt.Printf("Cannot initialize the default repository. %s\n", err)
+		return
+	}
 	cmd.Repository = r
 
 	if cmd.RequireProject {
 		p, err := ReadProject()
-		handleError(err)
+		if err != nil {
+			fmt.Printf("Cannot initialize the current project. %s\n", err)
+			return
+		}
 		cmd.Project = p
 	}
 	err = cmd.Flag.Parse(flag.Args()[1:])
-	handleError(err)
+		if err != nil {
+		fmt.Printf("Cannot parse command line. %s\n", err)
+		return
+	}
 	cmd.Run()
 
 }
@@ -143,12 +141,6 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 	return NewLocalRepository(path)
 }
 
-func handleError(err error) {
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
-	}
-}
 
 type Commander interface {
 	Run()

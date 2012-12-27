@@ -3,6 +3,7 @@ package gopack
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"io"
 	"os"
 	"path/filepath"
@@ -41,28 +42,67 @@ func walkDir(dst, src string, dirHandler, fileHandler func(dst, src string) erro
 	return nil
 }
 
-func PackageWalker(srcpath, startwith string, handler func(gpkpath string)) error {
-
+func PackageWalker(srcpath, startwith string, handler func(gpkpath string) bool) (c bool, err error) {
+	c = true
 	file, err := os.Open(srcpath)
+	
 	if err != nil {
-		return err
+		return true, err
 	}
 	subdir, err := file.Readdir(-1)
 
 	if err != nil {
-		return err
+		return true, err
 	}
 
 	for _, fi := range subdir {
 		if fi.IsDir() && strings.HasPrefix(fi.Name(), startwith) {
-			PackageWalker(filepath.Join(srcpath, fi.Name()), "", handler)
-		} else if fi.Name() == GpkFile {
-			//then src path is the package/version directory
-			handler(srcpath)
-			break
+			c, err = PackageWalker(filepath.Join(srcpath, fi.Name()), "", handler)
+			if !c {
+				break
+			}
+		} else {
+			if fi.Name() == GpkFile {
+				//then src path is the package/version directory
+				c = handler(srcpath)
+				break
+			}
 		}
 	}
-	return nil
+	return
+}
+
+//Untar reads the .gopackage file within the tar in memory. It does not set the Root
+func Unpack(dst string, in io.Reader) (err error) {
+	gz, err := gzip.NewReader(in)
+	if err != nil {
+		return
+	}
+
+	defer gz.Close()
+	tr := tar.NewReader(gz)
+	//fmt.Printf("unpacking to %s\n", dst)
+	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		// make the target file
+		ndst := filepath.Join(dst, hdr.Name)
+		os.MkdirAll(filepath.Dir(ndst), os.ModeDir|os.ModePerm) // mkdir -p
+		//fmt.Printf("%s\n", ndst)
+		df, err := os.Create(ndst)
+		if err != nil {
+			break
+		}
+		io.Copy(df, tr)
+		df.Close()
+	}
+	return
 }
 
 func TarFile(dst, src string, tw *tar.Writer) (err error) {

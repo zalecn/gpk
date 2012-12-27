@@ -1,8 +1,10 @@
 package cmds
 
 import (
+	"bytes"
 	. "ericaro.net/gopack"
-	"ericaro.net/gopack/httpserver"
+	"ericaro.net/gopack/protocol"
+	"ericaro.net/gopack/semver"
 	"fmt"
 )
 
@@ -52,7 +54,7 @@ func (c *Command) Serve() {
 
 	// run the go build command for local src, and with the appropriate gopath
 
-	server := httpserver.StandaloneBackendServer{
+	server := HttpServer{
 		Local: *c.Repository,
 	}
 	fmt.Printf("starting server %s\n", *serverAddrFlag)
@@ -61,7 +63,7 @@ func (c *Command) Serve() {
 }
 
 //var deployAddrFlag *string = Push.Flag.String("to", "central", "deploy to a specific remote repository.")
-var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
+//var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
 
 func (c *Command) Push() {
 
@@ -78,7 +80,7 @@ func (c *Command) Push() {
 		return
 	}
 
-	version, err := ParseVersion(c.Flag.Arg(2))
+	version, err := semver.ParseVersion(c.Flag.Arg(2))
 	if err != nil {
 		ErrorStyle.Printf("Invalid Version: %s\n", err)
 		return
@@ -91,30 +93,13 @@ func (c *Command) Push() {
 		return
 	}
 
-	// if -r I need to resolve dependencies first
-	rUrl := remote.Path()
-	fmt.Printf("Pushing to %s\n", rUrl.String())
-	if *pushRecursiveFlag {
-		dependencies, err := c.Repository.ResolvePackageDependencies(pkg, true, false)
-		if err != nil {
-			ErrorStyle.Printf("Cannot Resolve packages dependencies. %s\n", err);
-			return
-		}
-		for _, d := range dependencies {
-			// I need to test if I really need to push it or not !
-			canpush := d.Version().IsSnapshot() // always try to push snapshots
-			if !canpush { // ask the remote its opinion.
-				canpush, _ = remote.CheckPackageCanPush(d)
-			}
-			if canpush {
-				fmt.Printf("Pushing %s\n", d.ID())
-				remote.UploadPackage(d)
-			}
-		}
+	pid := protocol.PID{
+		Name:    c.Flag.Arg(1),
+		Version: version,
 	}
-
-	fmt.Printf("Pushing %s\n", pkg.ID()) 
-	remote.UploadPackage(pkg)
+	buf := new(bytes.Buffer)
+	pkg.Pack(buf)
+	remote.Push(pid, buf)
 }
 
 func (c *Command) Get() {

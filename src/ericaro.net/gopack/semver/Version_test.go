@@ -1,4 +1,4 @@
-package gopack
+package semver
 
 import (
 	"testing"
