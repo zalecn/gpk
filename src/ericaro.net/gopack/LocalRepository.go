@@ -74,9 +74,10 @@ func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
 	return
 }
 
-func (p *LocalRepository) RemoteRemove(name string) (err error) {
+func (p *LocalRepository) RemoteRemove(name string) (ref protocol.Client, err error) {
 	for i, r := range p.remotes {
 		if strings.EqualFold(name, r.Name()) {
+			ref = r
 			tmp := make([]protocol.Client, 0, len(p.remotes))
 			if i > 0 {
 				tmp = append(tmp, p.remotes[0:i]...)

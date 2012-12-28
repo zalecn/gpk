@@ -19,78 +19,87 @@ const (
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
 var localRepositoryFlag *string = flag.String("local", DefaultRepository, "path to the local repository to be used by default.")
 
+// We keep a dict AND a list of all available commands, the main command being generic
 var Commands map[string]*Command = make(map[string]*Command)
 var AllCommands []*Command = make([]*Command, 0)
 
+//Reg is to register a command (or a bunch of them) to be available in the main
 func Reg(commands ...*Command) {
-	for _, c := range commands {
+	for _, c := range commands { // we append the command in the double map (name, and alias)
 		Commands[c.Name] = c
 		Commands[c.Alias] = c
+		if c.FlagInit != nil {
+			c.FlagInit(c)
+		}
 	}
 	AllCommands = append(AllCommands, commands...)
 }
 
+// every file containing command shall register it this way
 func init() {
 	Reg(
 		&Help,
 	)
 }
 
+//Help Command
 var Help = Command{
 	Name:      `help`,
 	Alias:     `h`,
 	UsageLine: `[COMMAND]`,
 	Short:     `Display help information about COMMAND`,
 	Long:      ``, // better nothing than repeat
-	call:      func(c *Command) { c.Help() },
-}
+	Run: func(Help *Command) {
 
-func (c *Command) Help() {
-
-	if len(c.Flag.Args()) == 0 {
-		PrintGlobalUsage()
-		return
-	}
-	cmdName := c.Flag.Arg(0)
-	cmd, ok := Commands[cmdName]
-	if !ok {
-		fmt.Printf("Unknown command %v. Available commands are:\n\n", cmdName)
-		PrintGlobalUsage()
-		return
-	}
-
-	fmt.Printf("\nusage: %s\n", TitleStyle.Sprintf("gpk %s %s", cmd.Name, cmd.UsageLine))
-	fmt.Printf("    %s\n", ShortStyle.Sprintf("%s", cmd.Short))
-	fmt.Printf("where:\n")
-	TitleStyle.Printf("    %-10s %-20s %s\n", "option", "default", "usage")
-	cmd.Flag.VisitAll(printFlag)
-	fmt.Print(cmd.Long)
+		if len(Help.Flag.Args()) == 0 {
+			PrintGlobalUsage()
+			return
+		}
+		cmdName := Help.Flag.Arg(0)
+		cmd, ok := Commands[cmdName]
+		if !ok {
+			ErrorStyle.Printf("Unknown command %v.\n", cmdName)
+			PrintGlobalUsage()
+			return
+		}
+		TitleStyle.Printf("\nNAME\n\n")
+		fmt.Printf("    gpk %s  - %s\n", cmd.Name, cmd.Short)
+		TitleStyle.Printf("\nSYNOPSIS\n\n")
+		fmt.Printf("    gpk %s %s\n", cmd.Name, cmd.UsageLine)
+		
+		TitleStyle.Printf("\nOPTIONS\n\n")
+		TitleStyle.Printf("    %-10s  %-20s %s\n", "option", "default", "usage")
+		cmd.Flag.VisitAll(printFlag)
+		TitleStyle.Printf("\n\nDESCRIPTION\n\n")
+		fmt.Print("    "+cmd.Long)
+		fmt.Println("\n")
+	},
 }
 
 func printFlag(f *flag.Flag) {
-	fmt.Printf("    -%-10s %-20s %s\n", f.Name, f.DefValue, f.Usage)
+	fmt.Printf("    -%-10s %-20s %-s\n", f.Name, f.DefValue, f.Usage)
 
 }
 
 func PrintGlobalUsage() {
-	TitleStyle.Printf("\nGopack is a software project management tool for Golang.\n")
-	fmt.Printf("\nusage: ")
-	TitleStyle.Printf("%s [general options] <command> [options]  \n", Cmd)
+	TitleStyle.Printf("\n\nNAME\n\n")
 
-	fmt.Printf("Where general options are:\n")
-	TitleStyle.Printf("    %-10s %-20s %s\n", "option", "default", "usage")
+	fmt.Printf("  gpk - Gopack is a software project management tool for Golang.\n")
+	TitleStyle.Printf("\nSYNOPSIS\n\n")
+	fmt.Printf("  %s [general options] <command> [options]  \n", Cmd)
+	TitleStyle.Printf("\nOPTIONS\n\n")
+	TitleStyle.Printf("    %-10s  %-20s %-s\n", "option", "default", "usage")
 	flag.VisitAll(printFlag)
 	fmt.Println()
-	fmt.Printf("Where <command> are:\n")
-
-	fmt.Printf("  %-8s %-10s %s\n", "alias", "name", "description")
-	fmt.Printf("  -------------------\n")
-
+	TitleStyle.Printf("\nCOMMANDS\n\n")
 	for _, c := range AllCommands {
 		fmt.Printf("  %-8s %-10s %s\n", c.Alias, c.Name, c.Short)
 	}
+	fmt.Println("\n")
 }
 
+//Gopack is the main. the real function main lies outside to create an executable
+// It is fairly generic wrt to Commands, it first parses the general commands, then the command
 func Gopack() {
 
 	flag.Parse() // Scan the main arguments list
@@ -110,30 +119,33 @@ func Gopack() {
 		return
 	}
 
+	// always allocate a local repository (create one if required)
 	r, err := NewDefaultRepository()
 	if err != nil {
-		fmt.Printf("Cannot initialize the default repository. %s\n", err)
+		ErrorStyle.Printf("Cannot initialize the default repository. %s\n", err)
 		return
 	}
 	cmd.Repository = r
 
-	if cmd.RequireProject {
+	if cmd.RequireProject { // Commands can require to be executed on a project, in which case we have to load it
 		p, err := ReadProject()
 		if err != nil {
-			fmt.Printf("Cannot initialize the current project. %s\n", err)
+			ErrorStyle.Printf("Cannot initialize the current project. %s\n", err)
 			return
 		}
 		cmd.Project = p
 	}
+
+	// now continue parsing the command's args, using the command flags
 	err = cmd.Flag.Parse(flag.Args()[1:])
-		if err != nil {
-		fmt.Printf("Cannot parse command line. %s\n", err)
+	if err != nil {
+		ErrorStyle.Printf("Cannot parse command line. %s\n", err)
 		return
 	}
-	cmd.Run()
-
+	cmd.Run(cmd) // really execute the command
 }
 
+//NewDefaultepository is the factory for a local repo. It tries to find one in the user's home dir. The full policy is defined here. 
 func NewDefaultRepository() (r *LocalRepository, err error) {
 	u, _ := user.Current()
 	path := filepath.Join(u.HomeDir, *localRepositoryFlag)
@@ -141,26 +153,14 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 	return NewLocalRepository(path)
 }
 
-
-type Commander interface {
-	Run()
-}
-
+//Command contains mainly declarative info about a specific command, and pointer to a function in charge of executing the command. 
+// as command definitions are static within the code, there is no need to pass the command to the function, it already known it.
 type Command struct {
-	call                                func(c *Command)
+	Run                                 func(c *Command) // the callable to run
+	FlagInit                            func(c *Command) // the callable to init flags
 	Name, Alias, UsageLine, Short, Long string
-	Flag                                flag.FlagSet
+	Flag                                flag.FlagSet // the command options to be parsed
 	RequireProject                      bool
-	Project                             *Project
-	Repository                          *LocalRepository
+	Project                             *Project         // the project if required project as true, or a place holder for the command to write the current project
+	Repository                          *LocalRepository // the local repository
 }
-
-func (c *Command) Run() {
-	c.call(c)
-}
-
-/* here collect cmd use case
-gpk : display available version in local repo for the current repo
-
-
-*/

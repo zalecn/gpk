@@ -62,19 +62,26 @@ func (p *Project) AppendDependency(ref ...ProjectID) {
 	p.dependencies = append(p.dependencies, ref...)
 }
 
-func (p *Project) RemoveDependency(ref ProjectID) {
+//RemoveDependency removes the dependency by name, and return the removed reference
+func (p *Project) RemoveDependency(name string)  (ref *ProjectID){
 	src := p.dependencies
+	// first compute the dependencies to be removed (yes accidentally there might be more than one
 	is := make([]int, 0, len(src))
 	for i, r := range src {
-		if ref.Equals(r) {
+		if r.Name() == name {
+			ref = &r
 			is = append(is, i)
 		}
 	}
-	if len(is) == 0 { // nothing to do
-		return
-	}
-	dep := make([]ProjectID, 0, len(src)-len(is))
 	length := len(is)
+	if length == 0 { // nothing to do
+		return nil
+	}
+	// now apply the removal, unfortunately, I don't how to make it easier
+	
+	// I create a new slice of project id
+	dep := make([]ProjectID, 0, len(src)-length)
+	// and copy all but the removed
 	if is[0] > 0 {
 		dep = append(dep, src[0:is[0]]...)
 	}
@@ -84,6 +91,7 @@ func (p *Project) RemoveDependency(ref ProjectID) {
 	}
 	// last bit of slice
 	p.dependencies = dep
+	return
 }
 
 
