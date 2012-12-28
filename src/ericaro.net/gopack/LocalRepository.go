@@ -1,10 +1,10 @@
 package gopack
 
 import (
-	"ericaro.net/gopack/protocol"
-	. "ericaro.net/gopack/semver"
 	"bytes"
 	"encoding/json"
+	"ericaro.net/gopack/protocol"
+	. "ericaro.net/gopack/semver"
 	"errors"
 	"fmt"
 	"io"
@@ -19,12 +19,13 @@ const (
 	GpkrepositoryFile = ".gpkrepository"
 )
 
+//LocalRepository centralize operations around a directory (root), and a slice of remotes
 type LocalRepository struct {
 	root    string // absolute path to the repo, this must be a filesystem writable path.
 	remotes []protocol.Client
-	
 }
 
+//Write persists the LocalRepository information into it (as a .gpkrepository file)
 func (p LocalRepository) Write() (err error) {
 	dst := filepath.Join(p.root, GpkrepositoryFile)
 	fmt.Printf("writing down the local repo metadata to %s\n", dst)
@@ -32,7 +33,7 @@ func (p LocalRepository) Write() (err error) {
 	return err
 }
 
-
+//NewLocalRepository creates a new Empty LocalRepository on the current dir, does not overwrite the actual contect, but read it
 func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	root, err = filepath.Abs(filepath.Clean(root))
 	dst := filepath.Join(root, GpkrepositoryFile)
@@ -43,18 +44,17 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	r = &LocalRepository{
 		root:    root,
 		remotes: make([]protocol.Client, 0),
-		
 	}
-	err = JsonReadFile(dst, r)
+	JsonReadFile(dst, r) // those errors are escaped
 	return
 }
 
+//Remotes is to get the current slice of remotes
 func (r *LocalRepository) Remotes() []protocol.Client {
 	return r.remotes
 }
 
-
-
+//Remote to get a remote by name
 func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error) {
 	for _, re := range r.remotes {
 		if strings.EqualFold(name, re.Name()) {
@@ -64,6 +64,7 @@ func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error
 	return nil, errors.New("Missing remote")
 }
 
+//RemoteAdd append a remote to the list, refuse to append if there is a remote with that name already
 func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
 	for _, r := range p.remotes {
 		if strings.EqualFold(remote.Name(), r.Name()) {
@@ -74,6 +75,7 @@ func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
 	return
 }
 
+//RemoteRemove remove a remote from the list. Cannot fail. If there is no such remote it exit silently.
 func (p *LocalRepository) RemoteRemove(name string) (ref protocol.Client, err error) {
 	for i, r := range p.remotes {
 		if strings.EqualFold(name, r.Name()) {
@@ -92,20 +94,21 @@ func (p *LocalRepository) RemoteRemove(name string) (ref protocol.Client, err er
 	return
 }
 
+//FindPackage Look for the package identified by its PID within this local repository
 func (r *LocalRepository) FindPackage(p ProjectID) (prj *Package, err error) {
 	relative := p.Path()
 	abs := filepath.Join(r.root, relative, GpkFile)
 	//log.Printf("Looking for %v into %v", p, abs)
 	_, err = os.Stat(abs)
 	if os.IsNotExist(err) {
-		err = errors.New(fmt.Sprintf("Dependency %v is missing.", p))
+		err = errors.New(fmt.Sprintf("Package %s %s is missing.", p.Name(), p.Version().String()))
 	} else {
 		prj, err = ReadPackageFile(abs)
 	}
 	return // nil possible
 }
 
-//InstallProject install the project into this repository
+//InstallProject Creates a Package for this project, and the provided version. Copy the project content into this local repository
 func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 
 	p = &Package{
@@ -135,12 +138,11 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	//makes the copy
 	walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
 	p.self.workingDir = dst
-	fmt.Printf("new package %#v\n", p)
 	p.Write()
 	return
 }
 
-// search for package starting with name, and return them
+//Search for package starting with name, and return them
 func (r *LocalRepository) Search(search string, start int) (result []protocol.PID) {
 	//fmt.Printf("q: %s start=%d\n", search, start)
 	sp := filepath.Join(r.root, search)
@@ -163,10 +165,16 @@ func (r *LocalRepository) Search(search string, start int) (result []protocol.PI
 		return i-start < M
 	}
 	PackageWalker(sd, base, handler)
-	//fmt.Printf("found  %s\n", results[:i])
 	return results[:i]
 }
 
+//ResolvePackageDependencies recursively scan a package's dependency ProjectID and tries to resolve every ProjectID into a Package object.
+//ProjectID can be seen as just a pointer, or a reference, whereas Package can be seen as real content
+// In the process of resolving PID -> Package there are two options:
+// offline: if offline does not use any remote to look for missing dependencies
+// update:  if online use remotes to search for a newest version of the package.
+// Note: update option does not make sens for "released" version, as they are read only, and cannot be updated.
+// but we consider that Snapshots version can be. Server might allow to push and override a snapshot version. In which case the update command make sense.  
 func (r *LocalRepository) ResolvePackageDependencies(p *Package, offline, update bool) (dependencies []*Package, err error) {
 	return r.ResolveDependencies(&p.self, offline, update)
 }
@@ -192,7 +200,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 				if err != nil { // missing dependency in local repo, search remote
 
 					prj, err = remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-						prj, err = r.DownloadPackage(remote, d)
+						prj, err = r.downloadPackage(remote, d)
 						fail <- err
 						if err == nil {
 							suc <- prj
@@ -203,10 +211,14 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 				} else if update {
 					// try to get a newer version into prjnew
 					prjnew, err := remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-						prj, err = r.DownloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
-						fail <- err
-						if err == nil {
-							suc <- prj
+						if p.Version().IsSnapshot() {
+							prj, err = r.downloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
+							fail <- err
+							if err == nil {
+								suc <- prj
+							}
+						} else {
+							fail <- errors.New("cannot update a non Snapshot version")
 						}
 						return
 					})
@@ -232,6 +244,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 }
 
 //remoteHandler process a function for every remote
+// it expect that
 func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, success chan *Package, failure chan error) (p *Package, err error)) (p *Package, err error) {
 	success := make(chan *Package)
 	failure := make(chan error)
@@ -244,7 +257,7 @@ func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, su
 		select {
 		case p = <-success:
 			err = nil
-			close(success)
+			//close(success) // this is forbidden but I would like a way to leave with the first result asap
 			break
 		case err = <-failure:
 			// nothing to do // the loop will end after remotes queries
@@ -253,8 +266,8 @@ func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, su
 	return
 }
 
-func (r *LocalRepository) DownloadPackage(remote protocol.Client, p ProjectID) (prj *Package, err error) {
-
+//downloadPackage fetch the package, and install it in the local repository
+func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID) (prj *Package, err error) {
 	reader, err := remote.Fetch(protocol.PID{
 		Name:    p.Name(),
 		Version: p.Version(),
@@ -266,6 +279,8 @@ func (r *LocalRepository) DownloadPackage(remote protocol.Client, p ProjectID) (
 	return r.Install(reader)
 }
 
+//Install read a package in the reader (a tar.gzed stream, with a package .gpk inside and the project content)
+// find a suitable place for it ( name/version ) and replace the content
 func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	fmt.Printf("installing ...\n")
 	buf := new(bytes.Buffer)
@@ -290,6 +305,7 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 
 }
 
+//GoPath computes a GOPATH string based on a slice of Packages (use os.PathListSeparator as separator)
 func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err error) {
 	sources := make([]string, 0, len(dependencies))
 	for _, pr := range dependencies {
@@ -299,14 +315,15 @@ func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err er
 	return
 }
 
+//Root returns this repo roots
 func (r LocalRepository) Root() string {
 	return r.root
 }
-
+//UnmarshalJSON is part of the json protocol to make this object read/writable in json
 func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 	type RemoteFile struct {
-		Name string
-		Url  string
+		Name  string
+		Url   string
 		Token string
 	}
 
@@ -318,11 +335,17 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 
 	for _, r := range pf.Remotes {
 		ur, err := url.Parse(r.Url)
-		if err != nil {return err}
+		if err != nil {
+			return err
+		}
 		token, err := protocol.ParseStdToken(r.Token)
-		if err != nil {return err}
-		client, err := protocol.NewClient(r.Name, *ur, token )
-		if err != nil {continue}
+		if err != nil {
+			return err
+		}
+		client, err := protocol.NewClient(r.Name, *ur, token)
+		if err != nil {
+			continue
+		}
 		p.RemoteAdd(client)
 	}
 	return
@@ -330,24 +353,24 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 
 func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 	type RemoteFile struct {
-		Name string
-		Url  string
+		Name  string
+		Url   string
 		Token string
 	}
 
 	type LocalRepositoryFile struct {
 		Remotes []RemoteFile
 	}
-	
+
 	pf := LocalRepositoryFile{
-		Remotes:  make([]RemoteFile, len(p.remotes) ),
+		Remotes: make([]RemoteFile, len(p.remotes)),
 	}
-	for i:= range p.remotes {
+	for i := range p.remotes {
 		pr := p.remotes[i]
 		u := pr.Path()
 		pf.Remotes[i] = RemoteFile{
-			Name : pr.Name(),
-			Url : u.String(),
+			Name: pr.Name(),
+			Url:  u.String(),
 		}
 		tok := pr.Token()
 		if tok != nil {
@@ -356,7 +379,3 @@ func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(pf)
 }
-
-// add listing capacities (list current version for a given package) 
-
-// resolve dependencies? include local search and repo tree search, not local info)

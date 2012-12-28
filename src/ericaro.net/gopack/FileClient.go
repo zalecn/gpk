@@ -3,18 +3,17 @@ package gopack
 import (
 	"bytes"
 	"ericaro.net/gopack/protocol"
+	"fmt"
 	"io"
 	"net/url"
-	"fmt"
 	//"path/filepath"
 )
-
 
 func init() { // register this as a handler for file:/// url scheme
 	protocol.RegisterClient("file", NewFileClient)
 }
 
-//FileClient act as a remote repository for a 
+//FileClient implements a remote protocol using a local file 
 type FileClient struct {
 	repo LocalRepository // contains a local repo
 	protocol.BaseClient
@@ -26,7 +25,7 @@ func NewFileClient(name string, u url.URL, token *protocol.Token) (r protocol.Cl
 		err = fmt.Errorf("Invalid Remote Repository \"%s\"\n    ↳ %s is not a valid repository.\n    ↳ %s", name, u.String(), err)
 	}
 	r = &FileClient{
-		repo: *loc,
+		repo:       *loc,
 		BaseClient: *protocol.NewBaseClient(name, u, token),
 	}
 	return
@@ -43,21 +42,9 @@ func (r *FileClient) Search(query string, start int) (result []protocol.PID) {
 	return r.repo.Search(query, start)
 }
 
-func (r *FileClient) CheckPackageUpdate(p *Package) (newer bool, err error) {
-	// cave at p is the local package, I need to check for the same version in this one
-
-	rp, err := r.repo.FindPackage(p.ID())
-	if err != nil {
-		newer = false
-	} else {
-		newer = rp.timestamp.After(p.timestamp)
-	}
-	return
-}
-
 func (c *FileClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 	//ReadPackage(p ProjectID) (reader io.Reader, err error) {
-	p := NewProjectID(pid.Name, pid.Version)
+	p := *NewProjectID(pid.Name, pid.Version)
 	rp, err := c.repo.FindPackage(p)
 	if err != nil {
 		return
@@ -65,14 +52,15 @@ func (c *FileClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 
 	buf := new(bytes.Buffer)
 	rp.Pack(buf)
-	
+
 	// the package has been built into the buffer
-	return Closeable{buf}, nil
+	return closeable{buf}, nil
 }
 
-type Closeable struct{
-		*bytes.Buffer
-	}
-	func (c Closeable) Close() error{return nil}
 
-// TODO provide some "reader" from the remote, so local can copy it down
+// internal trick to fake a closeable, even if we use a buffer that is not closeable in fact
+type closeable struct {
+	*bytes.Buffer
+}
+
+func (c closeable) Close() error { return nil }

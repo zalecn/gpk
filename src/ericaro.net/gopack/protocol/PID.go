@@ -9,6 +9,7 @@ import (
 )
 
 //PID represent a Project ID through the internet. Can be either passed as parameter to a query, or returned as a list in a search result
+// contains references to package name, version, the package timestamp (used in update procotol), and a Token
 type PID struct {
 	Name      string
 	Version   semver.Version
@@ -16,11 +17,12 @@ type PID struct {
 	Token     *Token // is optional
 }
 
-
+//Path computes the relative path to the expected package (usually <name> / <version> )
 func (p PID) Path() string {
 	return filepath.Join(p.Name, p.Version.String())
 }
 
+//InParameter encode this PID in an url Values
 func (pid *PID) InParameter(v *url.Values) {
 	// prepare central server query args
 	v.Set("n", pid.Name)
@@ -33,7 +35,7 @@ func (pid *PID) InParameter(v *url.Values) {
 	}
 }
 
-//FromParameter fills a PID object from the url.Values, reverse of InParameter Function
+//FromParameter decode a pid from an url.Values
 func FromParameter(v *url.Values) (pid *PID, err error) {
 	pid = &PID{}
 	pid.Name = v.Get("n") // todo validate the syntax
@@ -50,6 +52,7 @@ func FromParameter(v *url.Values) (pid *PID, err error) {
 	return
 }
 
+//UnmarshalJSON part on the json protocol to make PID json-marshallable
 func (pid *PID) UnmarshalJSON(data []byte) (err error) {
 	type Pidfile struct {
 		Name      string
@@ -71,6 +74,7 @@ func (pid *PID) UnmarshalJSON(data []byte) (err error) {
 	return
 }
 
+//MarshalJSON part on the json protocol to make PID json-marshallable
 func (pid *PID) MarshalJSON() ([]byte, error) {
 	type Pidfile struct {
 		Name      string

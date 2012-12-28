@@ -158,7 +158,7 @@ var Add = Command{
 		}
 		name, version := Add.Flag.Arg(0), Add.Flag.Arg(1)
 		v, _ := ParseVersion(version)
-		ref := NewProjectID(name, v)
+		ref := *NewProjectID(name, v)
 		fmt.Printf("  -> %v\n", ref)
 
 		Add.Project.AppendDependency(ref)
@@ -185,7 +185,7 @@ var List = Command{
 		} else {
 			TitleStyle.Printf("All Dependencies for %s:\n", List.Project.Name())
 		}
-
+		// TODO print in a suitable way for copy pasting
 		dependencies, err := List.Repository.ResolveDependencies(List.Project, true, false)
 
 		if err != nil {

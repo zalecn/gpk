@@ -1,3 +1,9 @@
+//package semver contains an as close as possible implementation of http://semver.org
+//
+//Semver norm does not require digits to be used (they require it for  "normal" versions )
+// so we use this hole to define "snapshot" version:
+// version 0.0.0 are considered snapshots. the digits can be skipped, so does the prelease dash ("-")
+// this way "master" is a suitable semver, that fully qualifies to 0.0.0-master
 package semver
 
 import (
@@ -7,12 +13,14 @@ import (
 	"strings"
 )
 
+// regexp elements for the syntax
 const (
 	digits = `(\d+)?(?:\.(\d+)(?:\.(\d+))?)?`
 	sub    = `[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*`
 	all    = `%s(?:\-?(%s))?(?:\+(%s))?`
 )
 
+//regexp for a semver
 var (
 	SemVer, _ = regexp.Compile(fmt.Sprintf(all, digits, sub, sub))
 )
@@ -20,10 +28,10 @@ var (
 //Version is a struct that hold all [http://semver.org/ semantic version] components.
 type Version struct {
 	major, minor, patch uint32
-	pre, build          string
+	pre, build          string // for now pre and build part are not parsed (splitted into . ) 
 }
 
-
+//NewVersion creates a new standard semver
 func NewVersion(major, minor, patch uint32, pre, build string) *Version {
 	return &Version{
 		major:major,
@@ -34,8 +42,7 @@ func NewVersion(major, minor, patch uint32, pre, build string) *Version {
 	}
 }
 
-// TODO add tests and methods to this struct
-// TODO add persistence format control ( string back and forth is a good objective)
+//String pretty prints the version.
 
 func (v Version) String() (version string) {
 	version = fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
@@ -51,16 +58,19 @@ func (v Version) String() (version string) {
 	}
 	return
 }
+//Digits return the three digits of the semver
 func (v Version) Digits() (major, minor, patch uint32) {
 	return v.major, v.minor, v.patch
 }
+//PreRelease returns the Pre Release part unparsed
 func (v Version) PreRelease() string {
 	return v.pre
 }
+//Build return the Build part unparsed
 func (v Version) Build() string {
 	return v.build
 }
-
+//IsSnapshot return true if the three digits are equals to 0
 func (v Version) IsSnapshot() bool {
 	return v.major == 0 && v.minor == 0 && v.patch == 0
 }
@@ -70,6 +80,7 @@ func atoi(s string) uint32 {
 	return uint32(i)
 }
 
+//ParseVersion reads the version. It supports ommiting the digits (that are considered 0.0.0) and the leading "-"
 func ParseVersion(v string) (version Version, err error) {
 	v = strings.Trim(v, " {}[]\"'")
 	parts := SemVer.FindStringSubmatch(v)

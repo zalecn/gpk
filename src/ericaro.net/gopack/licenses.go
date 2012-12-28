@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+//License is a simple fullname alias collection of licenses
 type License struct {
 	FullName, Alias string
 }
@@ -19,9 +20,10 @@ func (l License) IsOSS() bool {
 	return l.IsValid( ) && l.Alias != "OCS"
 }
 
-
+//LicenseSet is a slice of license (used to create a singleton of licenses)
 type LicenseSet []License
 
+//The singleton of Valid licenses
 var (
 	Licenses LicenseSet = ([]License{
 		License{"Apache License 2.0", "ASF"},
@@ -36,7 +38,7 @@ var (
 		License{"Other Closed Source", "OCS"},
 	})
 )
-
+//String return a pretty print version of the license list
 func (set LicenseSet) String() (licenses string) {
 	licenses = ""
 	for _, l := range set {
@@ -45,6 +47,7 @@ func (set LicenseSet) String() (licenses string) {
 	return licenses
 }
 
+//Get return a license by its fullname
 func (licenses LicenseSet) Get(fullname string) (lic *License, err error) {
 	for i := range licenses {
 		if licenses[i].FullName == fullname {
@@ -54,6 +57,8 @@ func (licenses LicenseSet) Get(fullname string) (lic *License, err error) {
 	}
 	return nil, errors.New(fmt.Sprintf("Unknown or unsupported license %s", fullname))
 }
+
+//GetAlias return a license by its alias
 func (licenses LicenseSet) GetAlias(alias string) (lic *License, err error) {
 	for i := range licenses {
 		if licenses[i].Alias == alias {

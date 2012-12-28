@@ -6,14 +6,14 @@ import (
 	"log"
 	"net/http"
 )
-
+//HttpServer serve a local repository as a remote
 type HttpServer struct {
 	Local LocalRepository // handles the real operations
 	server http.Server
 }
 
 
-
+//Start starts an http server at the addr provided.
 func (s *HttpServer) Start(addr string) {
 	mux := http.NewServeMux()
 	protocol.HandleMux("/", s, mux) 
@@ -30,15 +30,13 @@ func (s *HttpServer) Debugf(format string, args ...interface{}) {
 
 //Contains return true if the server contains the ProjectID
 func (s *HttpServer) Receive(pid protocol.PID, r io.ReadCloser) (err error)            {
-//func (s *HttpServer) Receive(id gopack.ProjectID, timestamp time.Time, w http.ResponseWriter, r *http.Request) (err error) {
-	// pid is for sanity check before receiving the file, here in a standalone server I don't do any sanity check
 	_, err = s.Local.Install(r)
 	return
 }
 
 func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (err error)                    {
 //func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
-	id := NewProjectID(pid.Name,pid.Version)
+	id := *NewProjectID(pid.Name,pid.Version)
 	p, err := s.Local.FindPackage(id)
 	if err != nil {
 		return

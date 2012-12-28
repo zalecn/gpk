@@ -76,7 +76,7 @@ var Push = Command{
 		}
 
 		// now look for the real package in the local repo
-		pkg, err := Push.Repository.FindPackage(NewProjectID(Push.Flag.Arg(1), version))
+		pkg, err := Push.Repository.FindPackage(*NewProjectID(Push.Flag.Arg(1), version))
 		if err != nil {
 			ErrorStyle.Printf("Cannot find Package %s %s in Local Repository %s.\n    \u21b3 %s\n", Push.Flag.Arg(1), Push.Flag.Arg(2), Push.Repository.Root(), err)
 			// TODO as soon as I've got some search capability display similar results

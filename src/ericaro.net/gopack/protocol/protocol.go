@@ -1,5 +1,5 @@
 //protocol defines the basic remote protocols between a client and a remote repository
-// it defines a Client interface, and an http implementation. There is also a directory based implementation available in the localrepository package
+// it defines a Client interface that all remotes must implement
 package protocol
 
 import (
@@ -10,41 +10,54 @@ import (
 	"strconv"
 )
 
-const (
+const ( // codes operations
 	FETCH  = "fetch"
 	PUSH   = "push"
 	SEARCH = "search"
 )
 
+//ProtocolError is an error, but adds an error code. This module provides several "standard" errors
 type ProtocolError struct {
 	Message string
-	Code int
+	Code    int
 }
-func (p *ProtocolError) Error() string {return p.Message}
 
+//Error part of the error interface.
+func (p *ProtocolError) Error() string { return p.Message }
 
-var (
-	StatusForbidden = &ProtocolError{"Forbidden Operation", http.StatusForbidden}
-	StatusIdentityMismatch = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
-	StatusCannotOverwrite = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
+//Standard errors
+var ( 
+	StatusForbidden         = &ProtocolError{"Forbidden Operation", http.StatusForbidden}
+	StatusIdentityMismatch  = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
+	StatusCannotOverwrite   = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
 	StatusMissingDependency = &ProtocolError{"Missing Dependency", http.StatusPartialContent}
 )
 
-func ErrorCode( err error ) int {
-	switch e:= err.(type) {
-		case *ProtocolError:
-			return e.Code
+// convert any error into a suitable error code. it uses http.StatusInternalServerError if this is not a protocol error
+func ErrorCode(err error) int {
+	switch e := err.(type) {
+	case *ProtocolError:
+		return e.Code
 	}
 	return http.StatusInternalServerError
 }
 
-
+//Server is an interface that a server should implement 
 type Server interface {
-	Receive(pid PID, r io.ReadCloser) (error)
-	Serve(pid PID, w io.Writer) (error)
+	//Receive will process the package.
+	// you can use the pid to perform some quick checks before reading the package in r
+	//r is a reader to a tar.gzed stream containing the package and the .gpk
+	Receive(pid PID, r io.ReadCloser) error
+	//Serve is expected to find the package and write it down to the the writer interface.
+	// w must be a tar.gzed stream containing all the package structure, and a .gpk file
+	Serve(pid PID, w io.Writer) error
+	//Search actually perform the query and return a list of PID found
 	Search(query string, start int) ([]PID, error)
+	// The handlers make use of a debugf function.	
 	Debugf(format string, args ...interface{})
 }
+
+// not commenting below, I'm not very happy with that. I can reused this code properly, it is not the good way to do it I guess.
 
 func Handle(p string, s Server) { HandleMux(p, s, http.DefaultServeMux) }
 
@@ -98,7 +111,7 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 
 	err = s.Serve(*pid, w)
 	if err != nil {
-		http.Error(w, err.Error(), ErrorCode(err) )
+		http.Error(w, err.Error(), ErrorCode(err))
 	}
 	return
 }

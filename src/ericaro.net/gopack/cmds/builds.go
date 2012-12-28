@@ -40,11 +40,11 @@ var Path = Command{
 		}
 
 		if *pathListFlag {
-			fmt.Printf("    %s dependencies are:\n\n", ShortStyle.Sprintf("%s", Path.Project.Name()))
+			SuccessStyle.Printf("    %s dependencies:\n\n", Path.Project.Name())
 			// run the go build command for local src, and with the appropriate gopath
 			TitleStyle.Printf("    %-50s -> %s\n", "Dependency", "Path")
 			for _, d := range dependencies {
-				fmt.Printf("    %-50s -> %s\n", d.ID().String(), d.InstallDir())
+				SuccessStyle.Printf("    %-50s -> %s\n", d.ID().String(), d.InstallDir())
 			}
 			fmt.Println()
 		} else {

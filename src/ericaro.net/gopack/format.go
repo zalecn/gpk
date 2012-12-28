@@ -3,7 +3,7 @@ package gopack
 import (
 	"fmt"
 )
-
+// use some escape character for vterm to pretty print text in a console
 const (
 	TERM_RESET     = 0
 	TERM_BRIGHT    = 1
@@ -25,9 +25,9 @@ const (
 	COLOR_DEFAULT = 9
 )
 
+//Defines some styles used in the command.
 var (
 	TitleStyle = PFormat{TERM_BRIGHT, COLOR_DEFAULT, COLOR_DEFAULT}
-	ShortStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
 	ErrorStyle = PFormat{TERM_NULL, COLOR_RED, COLOR_DEFAULT}
 	SuccessStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
 	

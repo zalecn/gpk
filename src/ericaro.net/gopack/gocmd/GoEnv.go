@@ -9,6 +9,7 @@ import (
 
 // reflect some basic go operations
 
+//Wrapper around some go operations
 type GoEnv struct {
 	gopath string
 }
@@ -19,6 +20,7 @@ func NewGoEnv(gopath string) *GoEnv {
 	}
 }
 
+//BuildEnv gets the current os.Environ() map and override the keys define in vals
 func BuildEnv(vals map[string]string) []string {
 	current := os.Environ()
 	newenv := make([]string, 0, len(current))
@@ -43,6 +45,7 @@ func BuildEnv(vals map[string]string) []string {
 	return newenv
 }
 
+//Join joins a path like variable with some addition
 func Join(path string, elements ...string) string {
 	if len(path) == 0 {
 		return strings.Join(elements, string(os.PathListSeparator))
@@ -53,6 +56,8 @@ func Join(path string, elements ...string) string {
 
 }
 
+//Install wrap the go install command. 
+// For the moment only -a option is available
 func (g *GoEnv) Install(root string, all bool) {
 	var cmd *exec.Cmd
 	if all{
@@ -61,6 +66,7 @@ func (g *GoEnv) Install(root string, all bool) {
 		cmd = exec.Command("go", "install",  "./src/...")
 	}
 	
+	// extend the current env with my GOPATH variable
 	locals := map[string]string{
 		"GOPATH": Join(root, g.gopath),
 	}
@@ -74,7 +80,7 @@ func (g *GoEnv) Install(root string, all bool) {
 		fmt.Printf("%v\n", err)
 	}
 }
-
+// Wrapper around go test command
 func (g *GoEnv) Test(root string) {
 
 	cmd := exec.Command("go", "test",  "./src/...")
@@ -93,6 +99,7 @@ func (g *GoEnv) Test(root string) {
 	}
 }
 
+//Wrapper around go get command
 func (g *GoEnv) Get(pack string) {
 
 	cmd := exec.Command("go", "get", pack)
@@ -110,10 +117,3 @@ func (g *GoEnv) Get(pack string) {
 		fmt.Printf("%v\n", err)
 	}
 }
-
-// plan :
-// script (on the server) that scans for godocs for instance ) to auto upload 1.0 of every product
-// offer snapshot server instances, search the code (google code search), browse the doc
-
-// tasks
-// implements a server simple front end for artifacts  (name/ link to their source)

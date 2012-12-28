@@ -1,6 +1,7 @@
 package gopack
 
 import (
+	"encoding/json"
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
@@ -10,7 +11,30 @@ import (
 	"strings"
 	"time"
 )
+// Some anti-pattern ioutils: so kept private to this package
 
+func JsonReadFile(path string, v interface{}) (err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	return json.NewDecoder(f).Decode(v)
+}
+
+func JsonWriteFile(path string, v interface{}) (err error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	return json.NewEncoder(f).Encode(v)
+}
+
+
+//walkDir recursively walk into src directory  and fire callbacks to dirHandler, and fileHandler
+// it changes the dst to reflect the src relative path, meaning that if there is a src/foo dir, the handlers will be called with a dst/foo, and src/foo , this way
+// it is easy to either copy dir, or tar.gz dir (not changing the structure though)
 func walkDir(dst, src string, dirHandler, fileHandler func(dst, src string) error) error {
 	if dirHandler != nil {
 		dirHandler(dst, src)
@@ -42,6 +66,9 @@ func walkDir(dst, src string, dirHandler, fileHandler func(dst, src string) erro
 	return nil
 }
 
+//PackageWalker recursively scan a directory for packages ( identified as directory containing a .gpk file
+// calls the handler with those directory until the handler returns false, or the directory tree has been exhausted.
+// when he has found a package, it no longer look into it.
 func PackageWalker(srcpath, startwith string, handler func(gpkpath string) bool) (c bool, err error) {
 	c = true
 	file, err := os.Open(srcpath)
@@ -105,6 +132,7 @@ func Unpack(dst string, in io.Reader) (err error) {
 	return
 }
 
+//TarFile tar src file into a dst file in the tar writer 
 func TarFile(dst, src string, tw *tar.Writer) (err error) {
 	sf, err := os.Open(src)
 	if err != nil {
@@ -125,7 +153,7 @@ func TarFile(dst, src string, tw *tar.Writer) (err error) {
 	//log.Printf("%v %d\n", hdr.Name, hdr.Size)
 	return
 }
-
+//TarBuff copy a buffer content into the dst path in the tar writer
 func TarBuff(dst string, src *bytes.Buffer, tw *tar.Writer) (err error) {
 	hdr := new(tar.Header)
 	hdr.Size = int64(src.Len())
@@ -154,7 +182,3 @@ func CopyFile(dst, src string) (int64, error) {
 	return io.Copy(df, sf)
 }
 
-//Create a tar.gz using the best level compression
-func MakeTarget() (err error) {
-	return os.MkdirAll("target", os.ModeDir|os.ModePerm)
-}

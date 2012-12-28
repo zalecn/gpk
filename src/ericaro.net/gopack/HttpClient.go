@@ -15,8 +15,9 @@ func init() { // register this as a handler for file:/// url scheme
 	protocol.RegisterClient("http", NewHttpClient)
 }
 
+//Http implementation of a Remote 
 type HttpClient struct {
-	protocol.BaseClient
+	protocol.BaseClient // doesn't require anything else
 }
 
 func NewHttpClient(name string, u url.URL, token *protocol.Token) (r protocol.Client, err error) {

@@ -6,7 +6,11 @@ import (
 	"path/filepath"
 	"fmt"
 )
-
+//Project is a Go Project, plus some metadata:
+// a workingDir that must be layouted as a standard go project (a src, bin, pkg directory)
+// a unique name
+// a list of dependency references (name, version)
+// and a license for the source code. This is required because we cannot move around licenses if we aren't allowed to.
 type Project struct {
 	workingDir   string      // transient workding directory aboslute path
 	name         string      // package name
@@ -15,27 +19,29 @@ type Project struct {
 	// TO be added build time , and test dependencies
 }
 
+//ReadProject read project from the current dir
 func ReadProject() (p *Project, err error) {
 	p = &Project{}
 	err = JsonReadFile(GpkFile, p)
-	p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile))
+	p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) // TODO try a up dir lookup
 	return
 }
 
-//Write project  info to where it belongs (project holds working dir info)
+//Write down the project into the WorkingDir
 func (p *Project) Write() (err error) {
 	dst := filepath.Join(p.workingDir, GpkFile)
 	err = JsonWriteFile(dst, p)
 	return
 }
-
+//WorkingDir the directory containing the project
 func (p *Project) WorkingDir() string {
 	return p.workingDir
 }
-
+//Name the project unique name, it must be the package name.
 func (p *Project) Name() string {
 	return p.name
 }
+//License the project license for source code
 func (p *Project) License() License {
 	return p.license
 }
@@ -54,11 +60,14 @@ func (p *Project) SetLicense(license License) {
 	p.license = license
 }
 
+//Dependencies is a slice of ProjectID used by this project. Caveat this is not the whole dependency tree, just the root dependencies
 func (p *Project) Dependencies() []ProjectID {
 	return p.dependencies[:]
 }
 
+//AppendDependency append some root dependencies
 func (p *Project) AppendDependency(ref ...ProjectID) {
+	//BUG: check that the new dependencies does not "replace" existing one (there shall be only one dependency per package name
 	p.dependencies = append(p.dependencies, ref...)
 }
 
@@ -95,7 +104,7 @@ func (p *Project) RemoveDependency(name string)  (ref *ProjectID){
 }
 
 
-
+//UnmarshalJSON part of the json protocol
 func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
 		Name         string
@@ -116,6 +125,7 @@ func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	return
 }
 
+//MarshalJSON part of the json protocol
 func (p *Project) MarshalJSON() ([]byte, error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
 		Name         string
