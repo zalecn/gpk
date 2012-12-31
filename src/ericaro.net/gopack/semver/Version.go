@@ -42,6 +42,17 @@ func NewVersion(major, minor, patch uint32, pre, build string) *Version {
 	}
 }
 
+
+func (v Version) LowerThan( w Version) bool {
+	if v.major != w.major { return v.major < w.major}
+	if v.minor != w.minor { return v.minor < w.minor}
+	if v.patch != w.patch { return v.patch < w.patch}
+	if v.pre   != w.pre   { return v.pre   < w.pre  }
+	if v.build != w.build { return v.build < w.build}
+	return false
+	
+}
+
 //String pretty prints the version.
 
 func (v Version) String() (version string) {

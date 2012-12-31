@@ -1,16 +1,17 @@
 package gopack
 
 import (
-	"encoding/json"
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
 // Some anti-pattern ioutils: so kept private to this package
 
 func JsonReadFile(path string, v interface{}) (err error) {
@@ -30,7 +31,6 @@ func JsonWriteFile(path string, v interface{}) (err error) {
 	defer f.Close()
 	return json.NewEncoder(f).Encode(v)
 }
-
 
 //walkDir recursively walk into src directory  and fire callbacks to dirHandler, and fileHandler
 // it changes the dst to reflect the src relative path, meaning that if there is a src/foo dir, the handlers will be called with a dst/foo, and src/foo , this way
@@ -66,13 +66,38 @@ func walkDir(dst, src string, dirHandler, fileHandler func(dst, src string) erro
 	return nil
 }
 
+func ScanDir(src string) (dir []string, err error) {
+	file, err := os.Open(src)
+	if err != nil {
+		return nil, err
+	}
+	subdir, err := file.Readdir(-1)
+	if err != nil {
+		return dir, err
+	}
+	dir = make([]string, 0)
+
+	for _, fi := range subdir {
+		if fi.IsDir() {
+			nsrc := filepath.Join(src, fi.Name())
+			dir = append(dir, nsrc)
+			ndir, err := ScanDir(nsrc)
+			if err != nil {
+				return dir, err
+			}
+			dir =  append(dir, ndir...)
+		}
+	}
+	return
+}
+
 //PackageWalker recursively scan a directory for packages ( identified as directory containing a .gpk file
 // calls the handler with those directory until the handler returns false, or the directory tree has been exhausted.
 // when he has found a package, it no longer look into it.
 func PackageWalker(srcpath, startwith string, handler func(gpkpath string) bool) (c bool, err error) {
 	c = true
 	file, err := os.Open(srcpath)
-	
+
 	if err != nil {
 		return true, err
 	}
@@ -153,6 +178,7 @@ func TarFile(dst, src string, tw *tar.Writer) (err error) {
 	//log.Printf("%v %d\n", hdr.Name, hdr.Size)
 	return
 }
+
 //TarBuff copy a buffer content into the dst path in the tar writer
 func TarBuff(dst string, src *bytes.Buffer, tw *tar.Writer) (err error) {
 	hdr := new(tar.Header)
@@ -181,4 +207,3 @@ func CopyFile(dst, src string) (int64, error) {
 	defer df.Close()
 	return io.Copy(df, sf)
 }
-

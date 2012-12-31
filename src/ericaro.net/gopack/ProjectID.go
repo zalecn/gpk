@@ -70,3 +70,14 @@ func (p *ProjectID) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(pf)
 }
+
+type ProjectIDs []ProjectID
+
+func (s ProjectIDs) Len() int      { return len(s) }
+func (s ProjectIDs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s ProjectIDs) Less(i, j int) bool {
+	if s[i].Name() == s[j].Name() {
+		return s[i].Version().LowerThan(s[j].Version())
+	}
+	return s[i].Name() < s[j].Name()
+}

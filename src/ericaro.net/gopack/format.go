@@ -30,6 +30,7 @@ var (
 	TitleStyle = PFormat{TERM_BRIGHT, COLOR_DEFAULT, COLOR_DEFAULT}
 	ErrorStyle = PFormat{TERM_NULL, COLOR_RED, COLOR_DEFAULT}
 	SuccessStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
+	NormalStyle = PFormat{TERM_NULL, COLOR_DEFAULT, COLOR_DEFAULT}
 	
 )
 
@@ -42,4 +43,8 @@ func (f *PFormat) Printf(message string, v ...interface{}) {
 }
 func (f *PFormat) Sprintf(message string, v ...interface{}) string{
 	return fmt.Sprintf("%c[%d;%d;%dm%s%c[%dm", 0x1B, f.Attr, f.Foreground+30, f.Background+40, fmt.Sprintf(message, v...), 0x1B, 0)
+}
+
+func (f *PFormat) PrintTriple(small, medium, large string) {
+	f.Printf("       %-8s %-20s %-s\n", small, medium, large)
 }

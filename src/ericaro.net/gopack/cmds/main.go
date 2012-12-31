@@ -4,14 +4,24 @@ import (
 	. "ericaro.net/gopack"
 	"flag"
 	"fmt"
+	"math"
 	"os/user"
 	"path/filepath"
+	"sort"
 )
 
 const (
 	Cmd               = "gpk"
-	GopackageVersion  = "0.0.1" //?
+	GopackageVersion  = "1.0.0-beta.1" //?
 	DefaultRepository = ".gpkrepository"
+	
+
+	RemoteCategory = -iota
+	DependencyCategory = -iota
+	CompileCategory = -iota
+	InitCategory = -iota
+	HelpCategory = -iota
+	
 )
 
 // here are gopackage flags not specific ones
@@ -21,7 +31,20 @@ var localRepositoryFlag *string = flag.String("local", DefaultRepository, "path 
 
 // We keep a dict AND a list of all available commands, the main command being generic
 var Commands map[string]*Command = make(map[string]*Command)
-var AllCommands []*Command = make([]*Command, 0)
+
+// handle a sorted set of commands too
+type commands []*Command //
+var AllCommands commands = make([]*Command, 0)
+
+func (s commands) Len() int      { return len(s) }
+func (s commands) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s commands) Less(i, j int) bool {
+	ci, cj := s[i], s[j]
+	if ci.Category != cj.Category {
+		return ci.Category < cj.Category
+	}
+	return s[i].Name < s[j].Name
+}
 
 //Reg is to register a command (or a bunch of them) to be available in the main
 func Reg(commands ...*Command) {
@@ -35,73 +58,37 @@ func Reg(commands ...*Command) {
 	AllCommands = append(AllCommands, commands...)
 }
 
-// every file containing command shall register it this way
-func init() {
-	Reg(
-		&Help,
-	)
-}
-
-//Help Command
-var Help = Command{
-	Name:      `help`,
-	Alias:     `h`,
-	UsageLine: `[COMMAND]`,
-	Short:     `Display help information about COMMAND`,
-	Long:      ``, // better nothing than repeat
-	Run: func(Help *Command) {
-
-		if len(Help.Flag.Args()) == 0 {
-			PrintGlobalUsage()
-			return
-		}
-		cmdName := Help.Flag.Arg(0)
-		cmd, ok := Commands[cmdName]
-		if !ok {
-			ErrorStyle.Printf("Unknown command %v.\n", cmdName)
-			PrintGlobalUsage()
-			return
-		}
-		TitleStyle.Printf("\nNAME\n\n")
-		fmt.Printf("    gpk %s  - %s\n", cmd.Name, cmd.Short)
-		TitleStyle.Printf("\nSYNOPSIS\n\n")
-		fmt.Printf("    gpk %s %s\n", cmd.Name, cmd.UsageLine)
-		
-		TitleStyle.Printf("\nOPTIONS\n\n")
-		TitleStyle.Printf("    %-10s  %-20s %s\n", "option", "default", "usage")
-		cmd.Flag.VisitAll(printFlag)
-		TitleStyle.Printf("\n\nDESCRIPTION\n\n")
-		fmt.Print("    "+cmd.Long)
-		fmt.Println("\n")
-	},
-}
-
-func printFlag(f *flag.Flag) {
-	fmt.Printf("    -%-10s %-20s %-s\n", f.Name, f.DefValue, f.Usage)
-
-}
-
 func PrintGlobalUsage() {
-	TitleStyle.Printf("\n\nNAME\n\n")
+	TitleStyle.Printf("\n\nNAME\n")
 
-	fmt.Printf("  gpk - Gopack is a software project management tool for Golang.\n")
-	TitleStyle.Printf("\nSYNOPSIS\n\n")
-	fmt.Printf("  %s [general options] <command> [options]  \n", Cmd)
-	TitleStyle.Printf("\nOPTIONS\n\n")
-	TitleStyle.Printf("    %-10s  %-20s %-s\n", "option", "default", "usage")
-	flag.VisitAll(printFlag)
+	fmt.Printf("       gpk - Gopack is a software dependency management tool for Golang.\n             It help Managing, Building, and Sharing libraries in Go.\n")
+	TitleStyle.Printf("\nSYNOPSIS\n")
+	fmt.Printf("       %s [general options] <command> [options]  \n", Cmd)
+	TitleStyle.Printf("\nOPTIONS\n")
+	TitleStyle.PrintTriple("option", "default", "usage")
+
+	flag.VisitAll(func(f *flag.Flag) {
+		NormalStyle.PrintTriple("-"+f.Name, f.DefValue, f.Usage)
+	})
 	fmt.Println()
-	TitleStyle.Printf("\nCOMMANDS\n\n")
+	TitleStyle.Printf("\nCOMMANDS\n")
+	var category int8 = math.MinInt8
 	for _, c := range AllCommands {
-		fmt.Printf("  %-8s %-10s %s\n", c.Alias, c.Name, c.Short)
+		if c.Category != category {
+			category = c.Category
+			fmt.Println()
+		}
+		NormalStyle.PrintTriple(c.Alias, c.Name, c.Short)
 	}
+	
+	SuccessStyle.Printf("\n\n       Type 'gpk help [COMMAND]' for more details about a command.")
 	fmt.Println("\n")
 }
 
 //Gopack is the main. the real function main lies outside to create an executable
 // It is fairly generic wrt to Commands, it first parses the general commands, then the command
 func Gopack() {
-
+	sort.Sort(AllCommands)
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
 		fmt.Println("Version:", GopackageVersion)
@@ -156,6 +143,7 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 //Command contains mainly declarative info about a specific command, and pointer to a function in charge of executing the command. 
 // as command definitions are static within the code, there is no need to pass the command to the function, it already known it.
 type Command struct {
+	Category                            int8
 	Run                                 func(c *Command) // the callable to run
 	FlagInit                            func(c *Command) // the callable to init flags
 	Name, Alias, UsageLine, Short, Long string

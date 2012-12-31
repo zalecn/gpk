@@ -183,7 +183,6 @@ func (r *LocalRepository) ResolvePackageDependencies(p *Package, offline, update
 func (r *LocalRepository) ResolveDependencies(p *Project, offline, update bool) (dependencies []*Package, err error) {
 	depMap := make(map[ProjectID]*Package)
 	dependencies = make([]*Package, 0, 10)
-
 	err = r.findProjectDependencies(p, r.remotes, depMap, &dependencies, offline, update)
 	if err != nil {
 		return
