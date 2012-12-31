@@ -1,11 +1,8 @@
 Gopack Documentation
 ====================
 
-Copyright
-:   public domain
-
 Version
-:   0.1
+:   1.0.0-beta.1  no fully tested yet
 
 introduction
 ------------
