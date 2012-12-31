@@ -3,7 +3,7 @@ gopack
 
 Version:   1.0.0.beta.1
 
-Gopack is a software dependency management tool for Golang.
+Gopack is a software dependency management tool for Go.
 
 Gopack provides support for *Managing*, *Building*, *Sharing* libraries in [Go](http://golang.org).
 
@@ -38,12 +38,5 @@ Getting Started
 
 get it
 <pre>go get github.com/eatienza/gopack</pre>
-and install it. That's it, gpk comes as a standalone, executable <pre>gpk</pre>.
-
-type <pre>gpk help</pre> to use the built in help.
-
-
-
-
-
+and install it. That's it, gpk comes as a standalone, executable. Type <pre>gpk help</pre> to use the built-in help.
 
