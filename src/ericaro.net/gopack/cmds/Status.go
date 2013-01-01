@@ -21,7 +21,7 @@ var Status = Command{
 	RequireProject: true,
 	Run: func(Status *Command) {
 		//ONce you pay for the scm relation print the branch, and print available versions)
-		TitleStyle.Printf("    Name        :\n", Status.Project.Name())
+		TitleStyle.Printf("    Name        : %s\n", Status.Project.Name())
 		SuccessStyle.Printf("    License     : %s\n", Status.Project.License().FullName)
 		dep := Status.Project.Dependencies()
 		if len(dep) == 0 {
