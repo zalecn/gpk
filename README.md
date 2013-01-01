@@ -1,8 +1,8 @@
-gpk
+gopack
 ===
 
 Version
-:   1.0.0.beta.1
+:   1.0.0.beta.1 not yet tested
 
 Manual section
 :   1
