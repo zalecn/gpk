@@ -92,7 +92,42 @@ COMMANDS
 
 
        Type 'gpk help [COMMAND]' for more details about a command.
-
-
 </pre>
 
+
+Example
+=========
+
+Client/Server
+-------------
+On computer called 'server' lets start a server (it does not need to be on a specific directory)
+<pre>
+eric@server:$ gpk serve
+    starting server :8080
+</pre>
+It will by default expose the local repository
+
+On another computer called 'client' let's connect to this server
+<pre>eric@client:$ gpk r+ server http://192.168.0.30:8080
+    new remote: server http://192.168.0.30:8080
+</pre>
+Lets search for stuff in it
+<pre>eric@client:$gpk search -r server ericaro.net</pre>
+the result list is empty
+
+Let's install the current project (gopack) as "0.0.0-master" in the local repository of client, and push it to server
+<pre>eric@client:$ gpk install master</pre>
+<pre>eric@client:$ gpk push server ericaro.net/gopack master
+Success
+</pre>
+Note that "master" is a valid name for the [semantic version](http://semver.org) 0.0.0-master.
+
+On the server side here is what has happened
+<pre>
+RECEIVING
+       ericaro.net/gopack master GNU Lesser GPL INTO /home/eric/.gpkrepository/ericaro.net/gopack/master</pre>
+<small>due to issue #4 the output is not exactly the one above</small>
+
+Now, on the client side, if we search for package called ericaro.net we found one.
+<pre>eric@client:$ gpk s -r server ericaro.net
+    ericaro.net/gopack                       master</pre>

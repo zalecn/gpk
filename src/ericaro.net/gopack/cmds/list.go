@@ -66,13 +66,12 @@ var ListDependencies = Command{
 	Short:          `List declared Dependencies.`,
 	Long:           `List declared dependencies.`,
 	RequireProject: true,
-	FlagInit: func(List *Command) {
+	FlagInit: func(ListDependencies *Command) {
 	},
-	Run: func(List *Command) {
-		TitleStyle.Printf("Declared Dependencies for %s:\n", List.Project.Name())
-
+	Run: func(ListDependencies *Command) {
+		TitleStyle.Printf("\nLIST OF DECLARED DEPENDENCIES:\n")
 		// TODO print in a suitable way for copy pasting
-		dependencies := List.Project.Dependencies()
+		dependencies := ListDependencies.Project.Dependencies()
 		for _, d := range dependencies {
 			SuccessStyle.Printf("        %-40s %s\n", d.Name(), d.Version().String())
 		}
@@ -88,11 +87,9 @@ var ListRemotes = Command{
 	Short:          `List Remotes.`,
 	Long:           `List declared remotes.`,
 	RequireProject: false,
-	FlagInit: func(List *Command) {
-	},
-	Run: func(List *Command) {
-		TitleStyle.Printf("Declared Remotes for %s:\n", List.Project.Name())
-		rem := Status.Repository.Remotes()
+	Run: func(ListRemotes *Command) {
+		TitleStyle.Printf("\nLIST OF REMOTES:\n")
+		rem := ListRemotes.Repository.Remotes()
 		if len(rem) == 0 {
 			SuccessStyle.Printf("       <empty>\n")
 		} else {
@@ -134,7 +131,7 @@ var Path = Command{
 		}
 
 		if *pathListFlag {
-			TitleStyle.Printf("\nLIST OF PACKAGES:\n",)
+			TitleStyle.Printf("\nLIST OF PACKAGES:\n")
 			// run the go build command for local src, and with the appropriate gopath
 			if len(dependencies) > 0 {
 				TitleStyle.Printf("    %-50s %s\n", "Dependency", "Path")

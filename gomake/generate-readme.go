@@ -28,7 +28,7 @@ func Rst2Man(root, src, dst string) {
 
 }
 
-func Rst2Man(root, src, dst string) {
+func Rst2Html(root, src, dst string) {
 
 	cmd := exec.Command("rst2html","",  src, dst)
 
