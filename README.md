@@ -34,7 +34,65 @@ This section is still under development, it is kind of sparse (sorry)
 </small>
 
 
-get it
-<pre>go get github.com/eatienza/gopack</pre>
+installing it 
 
-and install it. That's it, gpk comes as a standalone, executable. Type <pre>gpk help</pre> to use the built-in help.
+Linux
+--------
+
+<pre> 
+git clone git@github.com:eatienza/gopack.git
+cd gopack/
+export GOPATH=`pwd`
+go install ./src/...
+sudo cp ./bin/gpk /usr/bin/gpk
+</pre>
+
+Now you should have
+<pre>$>gpk help</pre>
+
+<pre>
+
+NAME
+       gpk - Gopack is a software dependency management tool for Golang.
+             It help Managing, Building, and Sharing libraries in Go.
+
+SYNOPSIS
+       gpk [general options] <command> [options]  
+
+OPTIONS
+       option   default              usage
+       -local   .gpkrepository       path to the local repository to be used by default.
+       -v       false                Print the version number.
+
+
+COMMANDS
+
+       h        help                 Display help information about commands
+
+       !        init                 Initialize or Edit the current project
+       ?        status               Print status
+
+       c        compile              Compile project
+       t        test                 Run go test
+
+       d+       dadd                 Add dependency
+       d-       dremove              Remove dependency
+       ld       list-dependencies    List declared Dependencies.
+       lm       list-missing         Analyse the current directory and report or fix missing dependencies
+       lp       list-package         List all packages dependencies (recursive)
+
+       lr       list-remotes         List Remotes.
+       r+       radd                 Add a remote server.
+       r-       rremove              Remove a Remote
+
+       i        install              Install into the local repository
+       push     push                 Push a project in a remote repository
+       s        search               Search Packages .
+       serve    serve                Serve local repository as an http server
+
+
+       Type 'gpk help [COMMAND]' for more details about a command.
+
+
+</pre>
+
