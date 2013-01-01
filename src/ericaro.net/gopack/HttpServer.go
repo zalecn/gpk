@@ -30,7 +30,9 @@ func (s *HttpServer) Debugf(format string, args ...interface{}) {
 
 //Contains return true if the server contains the ProjectID
 func (s *HttpServer) Receive(pid protocol.PID, r io.ReadCloser) (err error)            {
-	_, err = s.Local.Install(r)
+	pak, err := s.Local.Install(r)
+	if err != nil {return}
+	log.Printf("RECEIVING %s %s %s INTO %s",pak.Name(), pak.Version().String(), pak.License(), pak.InstallDir() )
 	return
 }
 

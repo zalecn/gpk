@@ -280,7 +280,6 @@ func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID) (
 //Install read a package in the reader (a tar.gzed stream, with a package .gpk inside and the project content)
 // find a suitable place for it ( name/version ) and replace the content
 func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
-	fmt.Printf("installing ...\n")
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader) // download the tar.gz
 	//reader.Close()
@@ -289,13 +288,10 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	}
 	mem := bytes.NewReader(buf.Bytes())
 	prj, err = ReadPackageInPackage(mem) // foretell the package object from within a buffer
-	fmt.Printf("                %v\n", prj)
 	if err != nil {
 		return
 	}
 	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String())
-	fmt.Printf("                              TO %v\n", prj.self.workingDir)
-
 	mem = bytes.NewReader(buf.Bytes())
 	err = prj.Unpack(mem) // now I know the target I can unpack it.
 
