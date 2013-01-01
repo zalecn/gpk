@@ -3,18 +3,29 @@ gopack
 
 Version:   1.0.0.beta.1
 
-Gopack is a software dependency management tool for Go.
+<big>Gopack is a software dependency management tool for Go.</big>
 
-Gopack provides support for *Managing*, *Building*, *Sharing* libraries in [Go](http://golang.org).
+Gopack keeps packages *dependency* information to build the GOPATH variable, it also keeps *remote* locations where to publish and get packages.
+
+It can then deliver:
+
+* Building commands
+    * compile
+    * test
+* Managing commands
+    * list all dependencies (recursively)
+    * list missing imports, and fix them
+    * search for packages
+* Sharing commands
+    * download packages from remote locations
+    * publish packages to remote locations
+    * search packages or imports in remote locations
+    
+Gopack provides support for *Building*, *Managing*, *Sharing* libraries in [Go](http://golang.org).
 
 
-Gopack provides a *distributed* system to share libraries.
 
-Once connected to a node you can link your project with the rest of the world, and use those libraries.
-
-You can be part of this world too, by serving your packages too.
-
-DEFINITIONS
+Definitions
 -----------
 
 **Project**:  A [Golang](http://golang.org) package project, is the directory containing the source code for a given package. Usually it contains a src, a bin and a pkg directory.
@@ -36,7 +47,14 @@ DEFINITIONS
 Getting Started
 ---------------
 
+<small>
+<img alt="Under construction" src="http://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Under_construction_icon-green.svg/200px-Under_construction_icon-green.svg.png" height="33" width="40"/>
+This section is still under development, it is kind of sparse (sorry)
+</small>
+
+
 get it
 <pre>go get github.com/eatienza/gopack</pre>
+
 and install it. That's it, gpk comes as a standalone, executable. Type <pre>gpk help</pre> to use the built-in help.
 
