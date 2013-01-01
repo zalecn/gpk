@@ -179,6 +179,7 @@ var RemoveRemote = Command{
 	Long:           ``,
 	RequireProject: false,
 	Run: func(RemoveRemote *Command) {
+		
 
 		if len(RemoveRemote.Flag.Args()) != 1 {
 			RemoveRemote.Flag.Usage()
@@ -193,7 +194,7 @@ var RemoveRemote = Command{
 		}
 		if ref != nil {
 			SuccessStyle.Printf("Removed Remote %s %s\n", ref.Name(), ref.Path())
-			Remove.Project.Write()
+			RemoveRemote.Repository.Write()
 		} else {
 			ErrorStyle.Printf("Nothing to Remove\n")
 		}

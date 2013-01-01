@@ -28,7 +28,6 @@ type LocalRepository struct {
 //Write persists the LocalRepository information into it (as a .gpkrepository file)
 func (p LocalRepository) Write() (err error) {
 	dst := filepath.Join(p.root, GpkrepositoryFile)
-	fmt.Printf("writing down the local repo metadata to %s\n", dst)
 	err = JsonWriteFile(dst, &p)
 	return err
 }
