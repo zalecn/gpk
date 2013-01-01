@@ -122,7 +122,7 @@ func Gopack() {
 		}
 		cmd.Project = p
 	}
-
+	cmd.Flag.Usage = func(){PrintCommandHelp(cmd) }
 	// now continue parsing the command's args, using the command flags
 	err = cmd.Flag.Parse(flag.Args()[1:])
 	if err != nil {

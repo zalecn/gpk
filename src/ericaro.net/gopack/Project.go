@@ -3,9 +3,10 @@ package gopack
 import (
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"fmt"
+	"path/filepath"
 )
+
 //Project is a Go Project, plus some metadata:
 // a workingDir that must be layouted as a standard go project (a src, bin, pkg directory)
 // a unique name
@@ -33,14 +34,17 @@ func (p *Project) Write() (err error) {
 	err = JsonWriteFile(dst, p)
 	return
 }
+
 //WorkingDir the directory containing the project
 func (p *Project) WorkingDir() string {
 	return p.workingDir
 }
+
 //Name the project unique name, it must be the package name.
 func (p *Project) Name() string {
 	return p.name
 }
+
 //License the project license for source code
 func (p *Project) License() License {
 	return p.license
@@ -66,13 +70,15 @@ func (p *Project) Dependencies() []ProjectID {
 }
 
 //AppendDependency append some root dependencies
-func (p *Project) AppendDependency(ref ...ProjectID) {
+func (p *Project) AppendDependency(ref ProjectID) (rem *ProjectID) {
 	//BUG: check that the new dependencies does not "replace" existing one (there shall be only one dependency per package name
-	p.dependencies = append(p.dependencies, ref...)
+	rem = p.RemoveDependency(ref.Name()) // first remove it
+	p.dependencies = append(p.dependencies, ref)
+	return
 }
 
 //RemoveDependency removes the dependency by name, and return the removed reference
-func (p *Project) RemoveDependency(name string)  (ref *ProjectID){
+func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 	src := p.dependencies
 	// first compute the dependencies to be removed (yes accidentally there might be more than one
 	is := make([]int, 0, len(src))
@@ -87,7 +93,7 @@ func (p *Project) RemoveDependency(name string)  (ref *ProjectID){
 		return nil
 	}
 	// now apply the removal, unfortunately, I don't how to make it easier
-	
+
 	// I create a new slice of project id
 	dep := make([]ProjectID, 0, len(src)-length)
 	// and copy all but the removed
@@ -103,7 +109,6 @@ func (p *Project) RemoveDependency(name string)  (ref *ProjectID){
 	return
 }
 
-
 //UnmarshalJSON part of the json protocol
 func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
@@ -113,12 +118,12 @@ func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	}
 	var pf ProjectFile
 	json.Unmarshal(data, &pf)
-	
+
 	p.name = pf.Name
 	p.dependencies = pf.Dependencies
-	
-	if l,e:= Licenses.Get(pf.License); e!= nil {
-		err = errors.New(fmt.Sprintf(`Illegal license: "%s" was expecting one of: %s`, pf.License, Licenses) )
+
+	if l, e := Licenses.Get(pf.License); e != nil {
+		err = errors.New(fmt.Sprintf(`Illegal license: "%s" was expecting one of: %s`, pf.License, Licenses))
 	} else {
 		p.license = *l
 	}

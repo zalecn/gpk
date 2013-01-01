@@ -95,29 +95,30 @@ COMMANDS
 </pre>
 
 
-Example
+Examples
 =========
 
 Client/Server
--------------
-On computer called 'server' lets start a server (it does not need to be on a specific directory)
+-------------------
+
+On computer called 'querepare' lets start a server (it does not need to be on a specific directory)
 <pre>
-eric@server:$ gpk serve
+eric@querepare:$ gpk serve
     starting server :8080
 </pre>
 It will by default expose the local repository
 
-On another computer called 'client' let's connect to this server
-<pre>eric@client:$ gpk r+ server http://192.168.0.30:8080
-    new remote: server http://192.168.0.30:8080
+On another computer called 'ubanoco' let's connect to this server
+<pre>eric@ubanoco:$ gpk r+ quere http://192.168.0.30:8080
+    new remote: quere http://192.168.0.30:8080
 </pre>
 Lets search for stuff in it
-<pre>eric@client:$gpk search -r server ericaro.net</pre>
+<pre>eric@ubanoco:$gpk search -r quere ericaro.net</pre>
 the result list is empty
 
-Let's install the current project (gopack) as "0.0.0-master" in the local repository of client, and push it to server
-<pre>eric@client:$ gpk install master</pre>
-<pre>eric@client:$ gpk push server ericaro.net/gopack master
+Let's install the current project (gopack) as "0.0.0-master" in the local repository of ubanoco, and push it to quere
+<pre>eric@ubanoco:$ gpk install master</pre>
+<pre>eric@ubanoco:$ gpk push quere ericaro.net/gopack master
 Success
 </pre>
 Note that "master" is a valid name for the [semantic version](http://semver.org) 0.0.0-master.
@@ -128,6 +129,79 @@ RECEIVING
        ericaro.net/gopack master GNU Lesser GPL INTO /home/eric/.gpkrepository/ericaro.net/gopack/master</pre>
 <small>due to issue #4 the output is not exactly the one above</small>
 
+
 Now, on the client side, if we search for package called ericaro.net we found one.
-<pre>eric@client:$ gpk s -r server ericaro.net
-    ericaro.net/gopack                       master</pre>
+
+<pre>eric@ubanoco:$ gpk s -r quere ericaro.net</pre>
+
+
+<h2>Dependencies</h2>
+ 
+
+Lets work on another project, and we added some imports in the code:
+<pre>import (
+    "ericaro.net/gopack/"
+    "ericaro.net/gopack/protocol"
+    "ericaro.net/gopack/semver"
+
+)</pre>
+
+is it one two or three packages or only one ?
+
+The project will not compile, right ?
+<pre>
+$ gpk c
+src/myproject/gae/services.go:6:2: import "ericaro.net/gopack": cannot find package
+src/myproject/gae/entities.go:8:2: import "ericaro.net/gopack/protocol": cannot find package
+src/myproject/gae/entities.go:9:2: import "ericaro.net/gopack/semver": cannot find package
+exit status 1
+</pre>
+<small>'gpk c' is short for 'gpk compile'</small>
+
+Let's fix the project
+
+<pre>$gpk lm -f
+Missing imports (3), missing packages (1)
+Missing packages ericaro.net/gopack                       -> ☑ ericaro.net/gopack 1.0.0-beta.1 
+                                                          -> ☐ ericaro.net/gopack master
+Project Updated
+</pre>
+<small>
+
+* 'gpk lm' is short for 'gpk list-missing'
+* -f stands for 'fix'
+
+</small>
+
+Now your project compiles, and the dependency is under control:
+<pre>$ gpk ld
+
+LIST OF DECLARED DEPENDENCIES:
+        google.com/appengine                     1.7.3
+        ericaro.net/gopack                       1.0.0-beta.1
+</pre>
+<small>'gpk ld' is short for 'gpk list-dependencies'
+</small>
+
+
+<pre>$ gpk lp -l
+
+LIST OF PACKAGES:
+        google.com/appengine                     1.7.3
+        code.google.com/p/goprotobuf/proto       default
+        ericaro.net/gopack                       1.0.0-beta.1
+
+</pre>
+<small>
+
+* 'gpk lp' is short for 'gpk list-package'
+* -l stands for 'list' by default 'gpk lp' prints the dependencies in a GOPATH way
+</small>
+
+**Tip** 
+
+Typing
+           <pre>alias GP='export GOPATH=`gpk lp`'</pre>
+In your shell is an easy way to to get an automatic GOPATH setter.
+
+

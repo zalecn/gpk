@@ -134,9 +134,8 @@ var Path = Command{
 			TitleStyle.Printf("\nLIST OF PACKAGES:\n")
 			// run the go build command for local src, and with the appropriate gopath
 			if len(dependencies) > 0 {
-				TitleStyle.Printf("    %-50s %s\n", "Dependency", "Path")
 				for _, d := range dependencies {
-					SuccessStyle.Printf("       %-50s %s\n", d.ID().String(), d.InstallDir())
+					SuccessStyle.Printf("        %-40s %s\n", d.Name(), d.Version().String())
 				}
 			}else {
 				SuccessStyle.Printf("       <empty>\n")

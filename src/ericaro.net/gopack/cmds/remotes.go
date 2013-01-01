@@ -163,7 +163,11 @@ var AddRemote = Command{
 		if err != nil {
 			ErrorStyle.Printf("Failed to create the a client for this remote:\n    \u21b3 %s\n", err)
 		}
-		SuccessStyle.Printf("new remote: %s %s %s\n", name, u, token)
+		stoken := ""
+		if token != nil {
+			stoken = fmt.Sprintf("%s", token)
+		}
+		SuccessStyle.Printf("new remote: %s %s %s\n", name, u, stoken)
 		AddRemote.Repository.RemoteAdd(client)
 		AddRemote.Repository.Write()
 	},
@@ -193,7 +197,8 @@ var RemoveRemote = Command{
 			return
 		}
 		if ref != nil {
-			SuccessStyle.Printf("Removed Remote %s %s\n", ref.Name(), ref.Path())
+			u:= ref.Path()
+			SuccessStyle.Printf("Removed Remote %s %s\n", ref.Name(), u.String())
 			RemoveRemote.Repository.Write()
 		} else {
 			ErrorStyle.Printf("Nothing to Remove\n")

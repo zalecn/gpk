@@ -33,9 +33,13 @@ var Add = Command{
 		name, version := Add.Flag.Arg(0), Add.Flag.Arg(1)
 		v, _ := ParseVersion(version)
 		ref := *NewProjectID(name, v)
-		SuccessStyle.Printf("  -> %v\n", ref)
+		rem := Add.Project.AppendDependency(ref)
+		if rem != nil{
+		SuccessStyle.Printf("       - %v\n", rem)
+		
+		}
+		SuccessStyle.Printf("       + %v\n", ref)
 
-		Add.Project.AppendDependency(ref)
 
 		Add.Project.Write()
 	},

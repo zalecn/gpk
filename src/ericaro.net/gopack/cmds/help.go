@@ -33,7 +33,14 @@ var Help = Command{
 			PrintGlobalUsage()
 			return
 		}
-		TitleStyle.Printf("\nNAME\n")
+		PrintCommandHelp(cmd)
+		
+	},
+}
+
+
+func PrintCommandHelp(cmd *Command){
+TitleStyle.Printf("\nNAME\n")
 		fmt.Printf("       gpk %s  - %s\n", cmd.Name, cmd.Short)
 		TitleStyle.Printf("\nSYNOPSIS\n")
 		fmt.Printf("       gpk %s %s\n", cmd.Name, cmd.UsageLine)
@@ -54,5 +61,5 @@ var Help = Command{
 			fmt.Print("       " + cmd.Long)
 		}
 		fmt.Println("\n")
-	},
+
 }
