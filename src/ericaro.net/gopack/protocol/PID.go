@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"ericaro.net/gopack/semver" // todo move this version to another package (standalone semantic version package
 	"net/url"
-	"time"
 	"path/filepath"
+	"time"
 )
 
 //PID represent a Project ID through the internet. Can be either passed as parameter to a query, or returned as a list in a search result
@@ -45,7 +45,7 @@ func FromParameter(v *url.Values) (pid *PID, err error) {
 	}
 
 	t, err := time.Parse(time.ANSIC, v.Get("t"))
-	k, err := ParseURLToken (v.Get("k"))
+	k, err := ParseURLToken(v.Get("k"))
 
 	pid.Timestamp = &t
 	pid.Token = k
@@ -68,9 +68,10 @@ func (pid *PID) UnmarshalJSON(data []byte) (err error) {
 	}
 	t, err := time.Parse(time.ANSIC, pf.Timestamp)
 	if err != nil {
-		return
+		err = nil
+	} else {
+		pid.Timestamp = &t
 	}
-	pid.Timestamp = &t
 	return
 }
 
@@ -90,4 +91,3 @@ func (pid *PID) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(pf)
 }
-

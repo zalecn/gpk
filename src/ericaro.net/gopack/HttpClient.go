@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"ericaro.net/gopack/protocol"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
-	"errors"
 )
 
 func init() { // register this as a handler for file:/// url scheme
@@ -27,8 +27,6 @@ func NewHttpClient(name string, u url.URL, token *protocol.Token) (r protocol.Cl
 	return
 }
 
-
-
 func (c *HttpClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 	v := &url.Values{}
 	pid.InParameter(v)
@@ -42,7 +40,7 @@ func (c *HttpClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 	if err != nil {
 		return
 	}
-	if resp.StatusCode <200 || resp.StatusCode >=300 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, errors.New(resp.Status)
 	}
 	return resp.Body, nil
@@ -68,7 +66,7 @@ func (c *HttpClient) Push(pid protocol.PID, r io.Reader) (err error) {
 	}
 	req.ContentLength = int64(buf.Len()) // fuck I can't do that, I need to compute the length first
 	resp, err := client.Do(req)
-	if resp.StatusCode <200 || resp.StatusCode >=300 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return errors.New(resp.Status)
 	}
 	return
@@ -90,6 +88,7 @@ func (c *HttpClient) Search(query string, start int) (result []protocol.PID) {
 	if err != nil {
 		return result
 	}
+
 	json.NewDecoder(resp.Body).Decode(&result)
 	resp.Body.Close()
 	return result
