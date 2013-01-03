@@ -10,6 +10,8 @@ import (
 	"sort"
 	"os"
 	"errors"
+	"log"
+	"io/ioutil"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 
 var versionFlag *bool = flag.Bool("v", false, "Print the version number.")
 var localRepositoryFlag *string = flag.String("local", DefaultRepository, "path to the local repository to be used by default.")
+var verboseFlag *bool = flag.Bool("verbose", false, "print verbose output.")
 
 // We keep a dict AND a list of all available commands, the main command being generic
 var Commands map[string]*Command = make(map[string]*Command)
@@ -97,12 +100,19 @@ func PrintGlobalUsage() {
 //Gopack is the main. the real function main lies outside to create an executable
 // It is fairly generic wrt to Commands, it first parses the general commands, then the command
 func Gopack() {
-	sort.Sort(AllCommands)
+
+
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
 		fmt.Println("Version:", GopackageVersion)
 		return
 	}
+	if ! *verboseFlag {
+		log.SetOutput(ioutil.Discard)
+	}
+	
+	
+	sort.Sort(AllCommands)
 	if len(flag.Args()) == 0 {
 		PrintGlobalUsage()
 		return

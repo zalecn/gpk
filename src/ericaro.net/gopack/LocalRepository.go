@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -178,14 +179,11 @@ func (r *LocalRepository) ResolvePackageDependencies(p *Package, offline, update
 	return r.ResolveDependencies(&p.self, offline, update)
 }
 
-//FindProjectDependencies lookup recursively for all project dependencies
+//ResolveDependencies lookup recursively for all project dependencies
 func (r *LocalRepository) ResolveDependencies(p *Project, offline, update bool) (dependencies []*Package, err error) {
 	depMap := make(map[ProjectID]*Package)
 	dependencies = make([]*Package, 0, 10)
 	err = r.findProjectDependencies(p, r.remotes, depMap, &dependencies, offline, update)
-	if err != nil {
-		return
-	}
 	return
 }
 
@@ -196,35 +194,38 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 			prj, err := r.FindPackage(d)
 			if !offline {
 				if err != nil { // missing dependency in local repo, search remote
-
+					log.Printf("Trying to download %s from remotes", d)
 					prj, err = remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-						prj, err = r.downloadPackage(remote, d)
-						fail <- err
-						if err == nil {
-							suc <- prj
+						rprj, err := r.downloadPackage(remote, d)
+						if err != nil {
+							fail <- err
+						} else {
+							suc <- rprj
 						}
 						return
 					})
 
 				} else if update {
-					// try to get a newer version into prjnew
-					prjnew, err := remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-						if p.Version().IsSnapshot() {
-							prj, err = r.downloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
-							fail <- err
-							if err == nil {
-								suc <- prj
+					if d.Version().IsSnapshot() {
+						// try to get a newer version into prjnew
+						log.Printf("Trying to download a newer version for %s", d)
+						prjnew, err := remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
+							rprj, err := r.downloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
+							if err != nil {
+								fail <- err
+							} else {
+								suc <- rprj
 							}
-						} else {
-							fail <- errors.New("cannot update a non Snapshot version")
+							return
+						})
+						// prjnew contains a newer version (downloaded though)
+						if err != nil {
+							log.Printf("Failed to download new Version for %s", d)	
+							return err // failed to download
 						}
-						return
-					})
-					// prjnew contains a newer version (downloaded though)
-					if err != nil {
-						return err // failed to download
+
+						prj = prjnew
 					}
-					prj = prjnew
 				}
 			}
 			if prj == nil {
@@ -243,7 +244,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 
 //remoteHandler process a function for every remote
 // it expect that
-func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, success chan *Package, failure chan error) (p *Package, err error)) (p *Package, err error) {
+func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, success chan *Package, failure chan error) (p *Package, err error)) (pak *Package, err error) {
 	success := make(chan *Package)
 	failure := make(chan error)
 
@@ -253,10 +254,9 @@ func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, su
 	// now collect results
 	for _ = range remotes {
 		select {
-		case p = <-success:
+		case pak = <-success:
 			err = nil
 			//close(success) // this is forbidden but I would like a way to leave with the first result asap
-			break
 		case err = <-failure:
 			// nothing to do // the loop will end after remotes queries
 		}
@@ -266,15 +266,16 @@ func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, su
 
 //downloadPackage fetch the package, and install it in the local repository
 func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID) (prj *Package, err error) {
+	log.Printf("Downloading %s from %s", p, remote.Name())
 	reader, err := remote.Fetch(protocol.PID{
 		Name:    p.Name(),
 		Version: p.Version(),
 	})
-
 	if err != nil {
 		return nil, err
 	}
-	return r.Install(reader)
+	prj, err = r.Install(reader)
+	return
 }
 
 //Install read a package in the reader (a tar.gzed stream, with a package .gpk inside and the project content)
@@ -289,12 +290,15 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	mem := bytes.NewReader(buf.Bytes())
 	prj, err = ReadPackageInPackage(mem) // foretell the package object from within a buffer
 	if err != nil {
+		//log.Printf("Cannot read package", err)
 		return
 	}
 	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String())
 	mem = bytes.NewReader(buf.Bytes())
 	err = prj.Unpack(mem) // now I know the target I can unpack it.
-
+	//	if err != nil {
+	//		log.Printf("Installed with err ", err)
+	//	}
 	return
 
 }
@@ -313,6 +317,7 @@ func (r *LocalRepository) GoPath(dependencies []*Package) (gopath string, err er
 func (r LocalRepository) Root() string {
 	return r.root
 }
+
 //UnmarshalJSON is part of the json protocol to make this object read/writable in json
 func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 	type RemoteFile struct {
