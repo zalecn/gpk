@@ -23,7 +23,7 @@ var Search = Command{
 	FlagInit: func(Search *Command) {
 		searchRemoteFlag = Search.Flag.String("r", "", "remote. Search in the remote REMOTE instead")
 	},
-	Run: func(Search *Command) {
+	Run: func(Search *Command)  (err error){
 
 		search := Search.Flag.Arg(0)
 		var result []protocol.PID
@@ -38,7 +38,7 @@ var Search = Command{
 					u := r.Path()
 					fmt.Printf("    %-40s %s\n", r.Name(), u.String())
 				}
-				return
+				return err
 			}
 			result = remote.Search(search, 0)
 		} else {
@@ -57,5 +57,6 @@ var Search = Command{
 
 			SuccessStyle.Printf("    %-40s %s\n", currentPackage, pid.Version.String())
 		}
+		return
 	},
 }

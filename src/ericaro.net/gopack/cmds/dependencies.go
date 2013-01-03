@@ -24,11 +24,11 @@ var Add = Command{
        VERSION  a semantic version  
 `,
 	RequireProject: true,
-	Run: func(Add *Command) {
+	Run: func(Add *Command) (err error) {
 
 		if len(Add.Flag.Args()) != 2 {
 			Add.Flag.Usage()
-			return
+			return InvalidArgumentSize()
 		}
 		name, version := Add.Flag.Arg(0), Add.Flag.Arg(1)
 		v, _ := ParseVersion(version)
@@ -42,6 +42,7 @@ var Add = Command{
 
 
 		Add.Project.Write()
+		return nil
 	},
 }
 
@@ -54,11 +55,11 @@ var Remove = Command{
 	Short:          `Remove dependency`,
 	Long:           ``,
 	RequireProject: true,
-	Run: func(Remove *Command) {
+	Run: func(Remove *Command)  (err error){
 
 		if len(Remove.Flag.Args()) != 1 {
 			Remove.Flag.Usage()
-			return
+			return InvalidArgumentSize()
 		}
 		name := Remove.Flag.Arg(0)
 		ref := Remove.Project.RemoveDependency(name)
@@ -68,5 +69,6 @@ var Remove = Command{
 		} else {
 			ErrorStyle.Printf("Nothing to remove %s\n")
 		}
+		return nil
 	},
 }

@@ -43,7 +43,7 @@ var Init = Command{
 		initNameFlag = Init.Flag.String("n", "", "sets the project name")
 		initLicenseFlag = Init.Flag.String("l", "", "sets the project's license.")
 	},
-	Run: func(Init *Command) {
+	Run: func(Init *Command) (err error) {
 		// init does not require a project => I need to parse it myself and ignore failure
 		p, err := ReadProject()
 		if err == nil {
@@ -85,6 +85,6 @@ var Init = Command{
 
 		Init.Project = p // in case we implement sequence of commands (in the future)
 		p.Write()        // store it  one day I'll implement a lock on this file, right ?
-
+		return
 	},
 }

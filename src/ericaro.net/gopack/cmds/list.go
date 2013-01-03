@@ -31,7 +31,7 @@ var Imports = Command{
 		importsAutofixFlag = Imports.Flag.Bool("f", false, "fix auto. Auto fix the current project using default choices")
 
 	},
-	Run: func(Imports *Command) {
+	Run: func(Imports *Command)  (err error){
 		toSave := false
 		missing := Imports.Repository.MissingImports(Imports.Project, *importsOfflineFlag)
 		missingPack := Imports.Repository.MissingPackages(missing)
@@ -54,6 +54,7 @@ var Imports = Command{
 			SuccessStyle.Printf("Project Updated\n")
 			Imports.Project.Write()
 		}
+		return
 	},
 }
 
@@ -68,13 +69,14 @@ var ListDependencies = Command{
 	RequireProject: true,
 	FlagInit: func(ListDependencies *Command) {
 	},
-	Run: func(ListDependencies *Command) {
+	Run: func(ListDependencies *Command)  (err error){
 		TitleStyle.Printf("\nLIST OF DECLARED DEPENDENCIES:\n")
 		// TODO print in a suitable way for copy pasting
 		dependencies := ListDependencies.Project.Dependencies()
 		for _, d := range dependencies {
 			SuccessStyle.Printf("        %-40s %s\n", d.Name(), d.Version().String())
 		}
+		return
 	},
 }
 
@@ -87,7 +89,7 @@ var ListRemotes = Command{
 	Short:          `List Remotes.`,
 	Long:           `List declared remotes.`,
 	RequireProject: false,
-	Run: func(ListRemotes *Command) {
+	Run: func(ListRemotes *Command)  (err error){
 		TitleStyle.Printf("\nLIST OF REMOTES:\n")
 		rem := ListRemotes.Repository.Remotes()
 		if len(rem) == 0 {
@@ -104,6 +106,7 @@ var ListRemotes = Command{
 				SuccessStyle.Printf("       %-8s %-40s %s\n", r.Name(), u.String(), tr)
 			}
 		}
+		return
 	},
 }
 
@@ -121,7 +124,7 @@ var Path = Command{
 	FlagInit: func(Path *Command) {
 		pathListFlag = Path.Flag.Bool("l", false, "list. Pretty Print the list.")
 	},
-	Run: func(Path *Command) {
+	Run: func(Path *Command)  (err error){
 
 		// parse dependencies, and build the gopath
 		dependencies, err := Path.Repository.ResolveDependencies(Path.Project, true, false) // path does not update the dependencies
@@ -145,5 +148,6 @@ var Path = Command{
 			gopath, _ := Path.Repository.GoPath(dependencies)
 			fmt.Print(gocmd.Join(Path.Project.WorkingDir(), gopath)) // there is no line break because this way we can use it to initialize a local GOPATH var
 		}
+		return
 	},
 }

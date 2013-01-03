@@ -34,7 +34,7 @@ var Serve = Command{
 	FlagInit: func(Serve *Command) {
 	serverAddrFlag  = Serve.Flag.String("s", ":8080", "Serve the current local repository as a remote one for others to use.")
 	},
-	Run: func(Serve *Command) {
+	Run: func(Serve *Command)  (err error){
 
 		// run the go build command for local src, and with the appropriate gopath
 
@@ -43,6 +43,7 @@ var Serve = Command{
 		}
 		fmt.Printf("starting server %s\n", *serverAddrFlag)
 		server.Start(*serverAddrFlag)
+		return
 
 	},
 }
@@ -59,7 +60,7 @@ var Push = Command{
        PACKAGE a package available in the local repository (use search to list them)
        VERSION a semantic version of the PACKAGE available in the local repository`,
 	RequireProject: false,
-	Run: func(Push *Command) {
+	Run: func(Push *Command)  (err error){
 		rem := Push.Flag.Arg(0)
 		remote, err := Push.Repository.Remote(rem)
 		if err != nil {
@@ -108,6 +109,7 @@ var Push = Command{
 			return
 		}
 		SuccessStyle.Printf("Success\n")
+		return
 	},
 }
 
@@ -136,7 +138,7 @@ var AddRemote = Command{
        TOKEN   option: a secret TOKEN identification provided by the server to deliver authentication.
                See with your server provider`,
 	RequireProject: false,
-	Run: func(AddRemote *Command) {
+	Run: func(AddRemote *Command)  (err error){
 
 		if len(AddRemote.Flag.Args()) < 2 || len(AddRemote.Flag.Args()) > 3 {
 			ErrorStyle.Printf("Illegal arguments count\n")
@@ -170,6 +172,7 @@ var AddRemote = Command{
 		SuccessStyle.Printf("new remote: %s %s %s\n", name, u, stoken)
 		AddRemote.Repository.RemoteAdd(client)
 		AddRemote.Repository.Write()
+		return
 	},
 }
 
@@ -182,7 +185,7 @@ var RemoveRemote = Command{
 	Short:          `Remove a Remote`,
 	Long:           ``,
 	RequireProject: false,
-	Run: func(RemoveRemote *Command) {
+	Run: func(RemoveRemote *Command)  (err error){
 		
 
 		if len(RemoveRemote.Flag.Args()) != 1 {
@@ -204,6 +207,7 @@ var RemoveRemote = Command{
 			ErrorStyle.Printf("Nothing to Remove\n")
 		}
 		RemoveRemote.Repository.Write()
+		return
 	},
 }
 

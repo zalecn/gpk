@@ -46,7 +46,7 @@ func FromParameter(v *url.Values) (pid *PID, err error) {
 
 	t, err := time.Parse(time.ANSIC, v.Get("t"))
 	k, err := ParseURLToken(v.Get("k"))
-
+	
 	pid.Timestamp = &t
 	pid.Token = k
 	return
