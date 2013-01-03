@@ -44,7 +44,7 @@ var Compile = Command{
 		gopath, err := Compile.Repository.GoPath(dependencies)
 
 		goEnv := gocmd.NewGoEnv(gopath)
-		goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag) // TODO finalize the effort to wrap all the go install command (even maybe go build)
+		err = goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag) // TODO finalize the effort to wrap all the go install command (even maybe go build)
 		// also provide a go run equivalent 
 		return
 	},
@@ -77,7 +77,7 @@ var Test = Command{
 		}
 
 		goEnv := gocmd.NewGoEnv(gopath)
-		goEnv.Test(Test.Project.WorkingDir())
+		err = goEnv.Test(Test.Project.WorkingDir())
 		return
 	},
 }

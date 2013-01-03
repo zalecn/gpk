@@ -58,7 +58,7 @@ func Join(path string, elements ...string) string {
 
 //Install wrap the go install command. 
 // For the moment only -a option is available
-func (g *GoEnv) Install(root string, all bool) {
+func (g *GoEnv) Install(root string, all bool) (err error){
 	var cmd *exec.Cmd
 	if all{
 	cmd = exec.Command("go", "install", "-a",  "./src/...")
@@ -76,12 +76,11 @@ func (g *GoEnv) Install(root string, all bool) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = root // asbolute path of the project
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("%v\n", err)
-	}
+	err = cmd.Run()
+	return
 }
 // Wrapper around go test command
-func (g *GoEnv) Test(root string) {
+func (g *GoEnv) Test(root string) (err error){
 
 	cmd := exec.Command("go", "test",  "./src/...")
 
@@ -94,9 +93,8 @@ func (g *GoEnv) Test(root string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = root // asbolute path of the project
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("%v\n", err)
-	}
+	err = cmd.Run()
+	return
 }
 
 //Wrapper around go get command
