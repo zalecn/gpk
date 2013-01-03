@@ -134,9 +134,12 @@ func Gopack() {
 
 //NewDefaultepository is the factory for a local repo. It tries to find one in the user's home dir. The full policy is defined here. 
 func NewDefaultRepository() (r *LocalRepository, err error) {
-	u, _ := user.Current()
-	path := filepath.Join(u.HomeDir, *localRepositoryFlag)
-	path = filepath.Clean(path)
+	path := *localRepositoryFlag
+	if !filepath.IsAbs(path) {
+		u, _ := user.Current()
+		path = filepath.Join(u.HomeDir, *localRepositoryFlag)
+		path = filepath.Clean(path)
+	}
 	return NewLocalRepository(path)
 }
 
