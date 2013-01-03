@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"os"
 )
 
 //Project is a Go Project, plus some metadata:
@@ -23,7 +24,14 @@ type Project struct {
 //ReadProject read project from the current dir
 func ReadProject() (p *Project, err error) {
 	p = &Project{}
-	err = JsonReadFile(GpkFile, p)
+	path, err := os.Getwd()
+	if err != nil{
+	return
+	}
+	for ; !FileExists(filepath.Join(path, GpkFile)) && path != "/"; path =  filepath.Dir(path){}
+	if path != "/" { 
+		err = JsonReadFile(filepath.Join(path, GpkFile), p)
+	}
 	p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) // TODO try a up dir lookup
 	return
 }

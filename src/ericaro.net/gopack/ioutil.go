@@ -14,6 +14,11 @@ import (
 
 // Some anti-pattern ioutils: so kept private to this package
 
+func FileExists(path string) bool{
+	_, err := os.Stat(path)
+	return ! os.IsNotExist(err)
+}
+
 func JsonReadFile(path string, v interface{}) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
