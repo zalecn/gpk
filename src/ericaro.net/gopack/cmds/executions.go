@@ -33,7 +33,7 @@ var Compile = Command{
 		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
 		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
 	},
-	Run: func(Compile *Command) {
+	Run: func(Compile *Command) (err error){
 		// parse dependencies, and build the gopath
 		dependencies, err := Compile.Repository.ResolveDependencies(Compile.Project, *compileOfflineFlag, *compileUpdateFlag)
 		if err != nil {
@@ -46,6 +46,7 @@ var Compile = Command{
 		goEnv := gocmd.NewGoEnv(gopath)
 		goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag) // TODO finalize the effort to wrap all the go install command (even maybe go build)
 		// also provide a go run equivalent 
+		return
 	},
 }
 
@@ -59,7 +60,7 @@ var Test = Command{
 	Short:          `Run go test`,
 	Long:           `Run go test on the whole project.`, // TODO add options to select the package to be executed
 	RequireProject: true,
-	Run: func(Test *Command) {
+	Run: func(Test *Command) (err error) {
 
 		// parse dependencies, and build the gopath
 		dependencies, err := Test.Repository.ResolveDependencies(Test.Project, true, false)
@@ -77,5 +78,6 @@ var Test = Command{
 
 		goEnv := gocmd.NewGoEnv(gopath)
 		goEnv.Test(Test.Project.WorkingDir())
+		return
 	},
 }

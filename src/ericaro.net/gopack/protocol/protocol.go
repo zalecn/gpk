@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"log"
 )
 
 const ( // codes operations
@@ -77,6 +78,7 @@ func HandleMux(p string, s Server, mux *http.ServeMux) {
 func servePush(s Server, w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" { // on the push URL only POST method are supported
 		http.Error(w, "Method not supported.", http.StatusMethodNotAllowed)
+		log.Printf("%s not a POST request. %s instead", PUSH, r.Method)
 		return
 	}
 
@@ -84,13 +86,14 @@ func servePush(s Server, w http.ResponseWriter, r *http.Request) {
 	vals := r.URL.Query()
 	pid, err := FromParameter(&vals)
 	if err != nil {
-		s.Debugf("Error %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s invalid parameters. %s", PUSH, err)
 		return
 	}
 	err = s.Receive(*pid, r.Body) // create and fill the blob
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
+		log.Printf("%s Receive Error. %s", PUSH, err)
 	}
 	// can pass the reason as body response)
 	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -103,6 +106,7 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 	pid, err := FromParameter(&vals)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s invalid parameters. %s", FETCH, err)
 	}
 	if pid.Name == "" {
 		http.NotFound(w, r)
@@ -112,6 +116,7 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 	err = s.Serve(*pid, w)
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
+		log.Printf("%s Serve Error. %s", PUSH, err)
 	}
 	return
 }
@@ -122,6 +127,7 @@ func serveSearch(s Server, w http.ResponseWriter, r *http.Request) {
 	results, err := s.Search(query, start)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s Search Error. %s", SEARCH, err)
 
 	} else {
 		json.NewEncoder(w).Encode(results)

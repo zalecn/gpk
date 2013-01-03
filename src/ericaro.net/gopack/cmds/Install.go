@@ -23,12 +23,13 @@ var Install = Command{
        See http://semver.org for more details about semantic versions.
 `,
 	RequireProject: true,
-	Run: func(Install *Command) {
+	Run: func(Install *Command)  (err error){
 		version, err := semver.ParseVersion(Install.Flag.Arg(0))
 		if err != nil {
 			ErrorStyle.Printf("Syntax error on Version %s\n", Install.Flag.Arg(0))
 			return
 		}
 		Install.Repository.InstallProject(Install.Project, version)
+		return
 	},
 }

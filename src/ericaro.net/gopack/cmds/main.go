@@ -8,6 +8,8 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"os"
+	"errors"
 )
 
 const (
@@ -46,6 +48,8 @@ func (s commands) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
+
+
 //Reg is to register a command (or a bunch of them) to be available in the main
 func Reg(commands ...*Command) {
 	for _, c := range commands { // we append the command in the double map (name, and alias)
@@ -56,6 +60,11 @@ func Reg(commands ...*Command) {
 		}
 	}
 	AllCommands = append(AllCommands, commands...)
+}
+
+
+func InvalidArgumentSize() error {
+	return errors.New("Invalid Argument Size")
 }
 
 func PrintGlobalUsage() {
@@ -129,7 +138,10 @@ func Gopack() {
 		ErrorStyle.Printf("Cannot parse command line. %s\n", err)
 		return
 	}
-	cmd.Run(cmd) // really execute the command
+	err = cmd.Run(cmd) // really execute the command
+	if err != nil {
+		os.Exit( -1 )
+	}
 }
 
 //NewDefaultepository is the factory for a local repo. It tries to find one in the user's home dir. The full policy is defined here. 
@@ -144,7 +156,7 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 // as command definitions are static within the code, there is no need to pass the command to the function, it already known it.
 type Command struct {
 	Category                            int8
-	Run                                 func(c *Command) // the callable to run
+	Run                                 func(c *Command) error // the callable to run
 	FlagInit                            func(c *Command) // the callable to init flags
 	Name, Alias, UsageLine, Short, Long string
 	Flag                                flag.FlagSet // the command options to be parsed

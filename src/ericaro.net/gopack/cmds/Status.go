@@ -14,12 +14,12 @@ func init() {
 var Status = Command{
 	Name:           `status`,
 	Alias:          `?`,
-	Category:       InitCategory ,
+	Category:       InitCategory,
 	UsageLine:      ``,
 	Short:          `Print status`,
 	Long:           `Display current information about the current project and the current local repository`,
 	RequireProject: true,
-	Run: func(Status *Command) {
+	Run: func(Status *Command)  (err error){
 		//ONce you pay for the scm relation print the branch, and print available versions)
 		TitleStyle.Printf("    Name        : %s\n", Status.Project.Name())
 		SuccessStyle.Printf("    License     : %s\n", Status.Project.License().FullName)
@@ -49,6 +49,6 @@ var Status = Command{
 				SuccessStyle.Printf("        %-40s %-40s %s\n", r.Name(), u.String(), tr)
 			}
 		}
-
+		return
 	},
 }
