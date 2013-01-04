@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	GpkrepositoryFile = ".gpkrepository"
+	GpkrepositoryFile        = ".gpkrepository"
+	GpkRepositoryFileVersion = "1.0.0"
 )
 
 //LocalRepository centralize operations around a directory (root), and a slice of remotes
@@ -220,7 +221,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 						})
 						// prjnew contains a newer version (downloaded though)
 						if err != nil {
-							log.Printf("Failed to download new Version for %s", d)	
+							log.Printf("Failed to download new Version for %s", d)
 							return err // failed to download
 						}
 
@@ -327,11 +328,14 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 	}
 
 	type LocalRepositoryFile struct {
-		Remotes []RemoteFile
+		FormatVersion string
+		Remotes     []RemoteFile
 	}
 	var pf LocalRepositoryFile
 	json.Unmarshal(data, &pf)
-
+	if pf.FormatVersion != GpkRepositoryFileVersion {
+		log.Printf("Warning: Unknown format version \"%s\"", pf.FormatVersion)
+	}
 	for _, r := range pf.Remotes {
 		ur, err := url.Parse(r.Url)
 		if err != nil {
@@ -358,10 +362,12 @@ func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 	}
 
 	type LocalRepositoryFile struct {
+		FormatVersion string
 		Remotes []RemoteFile
 	}
 
 	pf := LocalRepositoryFile{
+		FormatVersion: GpkRepositoryFileVersion,
 		Remotes: make([]RemoteFile, len(p.remotes)),
 	}
 	for i := range p.remotes {

@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
+	"log"
 	"os"
+	"path/filepath"
+)
+
+const (
+	GpkFileVersion = "1.0.0"
 )
 
 //Project is a Go Project, plus some metadata:
@@ -25,11 +30,12 @@ type Project struct {
 func ReadProject() (p *Project, err error) {
 	p = &Project{}
 	path, err := os.Getwd()
-	if err != nil{
-	return
+	if err != nil {
+		return
 	}
-	for ; !FileExists(filepath.Join(path, GpkFile)) && path != "/"; path =  filepath.Dir(path){}
-	if path != "/" { 
+	for ; !FileExists(filepath.Join(path, GpkFile)) && path != "/"; path = filepath.Dir(path) {
+	}
+	if path != "/" {
 		err = JsonReadFile(filepath.Join(path, GpkFile), p)
 	}
 	p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) // TODO try a up dir lookup
@@ -120,12 +126,16 @@ func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 //UnmarshalJSON part of the json protocol
 func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
-		Name         string
-		Dependencies []ProjectID
-		License      string // one of the value in the restricted list
+		FormatVersion string
+		Name          string
+		Dependencies  []ProjectID
+		License       string // one of the value in the restricted list
 	}
 	var pf ProjectFile
 	json.Unmarshal(data, &pf)
+	if pf.FormatVersion != GpkFileVersion {
+		log.Printf("Warning: Unknown format version \"%s\"", pf.FormatVersion)
+	}
 
 	p.name = pf.Name
 	p.dependencies = pf.Dependencies
@@ -141,11 +151,13 @@ func (p *Project) UnmarshalJSON(data []byte) (err error) {
 //MarshalJSON part of the json protocol
 func (p *Project) MarshalJSON() ([]byte, error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
-		Name         string
-		Dependencies []ProjectID
-		License      string // one of the value in the restricted list
+		FormatVersion string
+		Name          string
+		Dependencies  []ProjectID
+		License       string // one of the value in the restricted list
 	}
 	pf := ProjectFile{
+		FormatVersion: GpkFileVersion,
 		Name:         p.name,
 		Dependencies: p.dependencies,
 		License:      p.license.FullName,
