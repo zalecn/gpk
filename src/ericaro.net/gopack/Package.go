@@ -1,4 +1,4 @@
-//package gopack is used to manage information relative to packaging.
+//Package gopack contains the main objects for Gopack that is a software dependency management tool for Go.
 package gopack
 
 import (

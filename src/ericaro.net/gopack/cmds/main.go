@@ -1,3 +1,4 @@
+//Package cmds contains the commands available in gpk executable.
 package cmds
 
 import (
@@ -16,7 +17,7 @@ import (
 
 const (
 	Cmd               = "gpk"
-	GopackageVersion  = "1.0.0-beta.1" //?
+	GopackageVersion  = "1.0.0-beta.3" //?
 	DefaultRepository = ".gpkrepository"
 	
 

@@ -1,3 +1,4 @@
+//Package gocmd provides simple abstraction for the go command line tool.
 package gocmd
 
 import (
