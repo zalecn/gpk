@@ -12,8 +12,8 @@ It can then deliver:
     * test
 * **Managing** commands
     * list all dependencies (recursively)
-    * list missing imports, and fix them
-    * search for packages
+    * find and list missing imports, and fix them
+    * search for packages by name ( find the right version)
 * **Sharing** commands
     * download packages from remote locations
     * publish packages to remote locations

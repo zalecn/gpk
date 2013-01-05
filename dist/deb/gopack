@@ -25,4 +25,4 @@ Files: gpk /usr/bin/
 #  <more pairs, if there's more than one file to include. Notice the starting space>
 
 Description: Gopack is a package manager for golang
-  Gopack smart description
+    Gopack is a software dependency management tool for Go.
