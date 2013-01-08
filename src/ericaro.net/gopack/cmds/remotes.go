@@ -169,8 +169,12 @@ var AddRemote = Command{
 		if token != nil {
 			stoken = fmt.Sprintf("%s", token)
 		}
+		err = AddRemote.Repository.RemoteAdd(client)
+		if err != nil{
+			ErrorStyle.Printf("%s\n", err)
+			return
+		}
 		SuccessStyle.Printf("new remote: %s %s %s\n", name, u, stoken)
-		AddRemote.Repository.RemoteAdd(client)
 		AddRemote.Repository.Write()
 		return
 	},
