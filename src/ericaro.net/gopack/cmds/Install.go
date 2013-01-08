@@ -24,6 +24,13 @@ var Install = Command{
 `,
 	RequireProject: true,
 	Run: func(Install *Command)  (err error){
+	
+		if len(Install.Flag.Args()) !=1 {
+			ErrorStyle.Printf("Missing version arguments\n")
+			NormalStyle.Printf("       gpk install VERSION\n")
+			return InvalidArgumentSize()
+			return
+		}
 		version, err := semver.ParseVersion(Install.Flag.Arg(0))
 		if err != nil {
 			ErrorStyle.Printf("Syntax error on Version %s\n", Install.Flag.Arg(0))
