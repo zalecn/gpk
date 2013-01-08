@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Gopack by eatienza</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Gopack</h1>
+          <h2>Gopack is a software dependency management tool for Golang</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/eatienza/gopack/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/eatienza/gopack/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/eatienza/gopack" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>gopack</h1>
+
+<p><strong>Gopack</strong> is a software dependency management tool for <strong>Go</strong>.</p>
+
+<p><strong>Gopack</strong> keeps packages <strong>dependency</strong> information to build the GOPATH variable, it also keeps <strong>remote</strong> locations where to publish and get packages.</p>
+
+<p>It can then deliver:</p>
+
+<ul>
+<li>
+<strong>Building</strong> commands
+
+<ul>
+<li>compile</li>
+<li>test</li>
+</ul>
+</li>
+<li>
+<strong>Managing</strong> commands
+
+<ul>
+<li>list all dependencies (recursively)</li>
+<li>find and list missing imports, and fix them</li>
+<li>search for packages by name ( find the right version)</li>
+</ul>
+</li>
+<li>
+<strong>Sharing</strong> commands
+
+<ul>
+<li>download packages from remote locations</li>
+<li>publish packages to remote locations</li>
+<li>search packages or imports in remote locations</li>
+</ul>
+</li>
+</ul><p></p>
+
+<h1>Getting Started</h1>
+
+<p>Version:   1.0.0.beta.1</p>
+
+<p>
+<img alt="Under construction" src="http://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Under_construction_icon-green.svg/200px-Under_construction_icon-green.svg.png" height="33" width="40">
+This section is still under development, it is kind of sparse (sorry)
+</p>
+
+<p>installing it </p>
+
+<h2>Linux</h2>
+
+<pre> 
+git clone git@github.com:eatienza/gopack.git
+cd gopack/
+export GOPATH=`pwd`
+go install ./src/...
+sudo cp ./bin/gpk /usr/bin/gpk
+</pre>
+
+<p>Now you should have</p>
+
+<pre>$&gt;gpk help</pre>
+
+<pre>
+
+NAME
+       gpk - Gopack is a software dependency management tool for Golang.
+             It help Managing, Building, and Sharing libraries in Go.
+
+SYNOPSIS
+       gpk [general options]  [options]  
+
+OPTIONS
+       option   default              usage
+       -local   .gpkrepository       path to the local repository to be used by default.
+       -v       false                Print the version number.
+
+
+COMMANDS
+
+       h        help                 Display help information about commands
+
+       !        init                 Initialize or Edit the current project
+       ?        status               Print status
+
+       c        compile              Compile project
+       t        test                 Run go test
+
+       d+       dadd                 Add dependency
+       d-       dremove              Remove dependency
+       ld       list-dependencies    List declared Dependencies.
+       lm       list-missing         Analyse the current directory and report or fix missing dependencies
+       lp       list-package         List all packages dependencies (recursive)
+
+       lr       list-remotes         List Remotes.
+       r+       radd                 Add a remote server.
+       r-       rremove              Remove a Remote
+
+       i        install              Install into the local repository
+       push     push                 Push a project in a remote repository
+       s        search               Search Packages .
+       serve    serve                Serve local repository as an http server
+
+
+       Type 'gpk help [COMMAND]' for more details about a command.
+</pre>
+
+<h1>Examples</h1>
+
+<h2>Client/Server</h2>
+
+<p>On computer called 'querepare' lets start a server (it does not need to be on a specific directory)</p>
+
+<pre>
+eric@querepare:$ gpk serve
+    starting server :8080
+</pre>
+
+<p>It will by default expose the local repository</p>
+
+<p>On another computer called 'ubanoco' let's connect to this server</p>
+
+<pre>eric@ubanoco:$ gpk r+ quere http://192.168.0.30:8080
+    new remote: quere http://192.168.0.30:8080
+</pre>
+
+<p>Lets search for stuff in it</p>
+
+<pre>eric@ubanoco:$gpk search -r quere ericaro.net</pre>
+
+<p>the result list is empty</p>
+
+<p>Let's install the current project (gopack) as "0.0.0-master" in the local repository of ubanoco, and push it to quere</p>
+
+<pre>eric@ubanoco:$ gpk install master</pre>
+
+<pre>eric@ubanoco:$ gpk push quere ericaro.net/gopack master
+Success
+</pre>
+
+<p>Note that "master" is a valid name for the <a href="http://semver.org">semantic version</a> 0.0.0-master.</p>
+
+<p>On the server side here is what has happened</p>
+
+<pre>
+RECEIVING
+       ericaro.net/gopack master GNU Lesser GPL INTO /home/eric/.gpkrepository/ericaro.net/gopack/master</pre>
+due to issue #4 the output is not exactly the one above
+
+
+Now, on the client side, if we search for package called ericaro.net we found one.
+
+<pre>eric@ubanoco:$ gpk s -r quere ericaro.net</pre>
+
+
+<h2>Dependencies</h2>
+ 
+
+Lets work on another project, and we added some imports in the code:
+<pre>import (
+    "ericaro.net/gopack/"
+    "ericaro.net/gopack/protocol"
+    "ericaro.net/gopack/semver"
+
+)</pre>
+
+is it one two or three packages or only one ?
+
+The project will not compile, right ?
+<pre>
+$ gpk c
+src/myproject/gae/services.go:6:2: import "ericaro.net/gopack": cannot find package
+src/myproject/gae/entities.go:8:2: import "ericaro.net/gopack/protocol": cannot find package
+src/myproject/gae/entities.go:9:2: import "ericaro.net/gopack/semver": cannot find package
+exit status 1
+</pre>
+
+<p>'gpk c' is short for 'gpk compile'</p>
+
+<p>Let's fix the project</p>
+
+<pre>$gpk lm -f
+Missing imports (3), missing packages (1)
+Missing packages ericaro.net/gopack                       -&gt; ☑ ericaro.net/gopack 1.0.0-beta.1 
+                                                          -&gt; ☐ ericaro.net/gopack master
+Project Updated
+</pre>
+
+<p></p>
+
+<ul>
+<li>'gpk lm' is short for 'gpk list-missing'</li>
+<li>-f stands for 'fix'</li>
+</ul><p></p>
+
+<p>Now your project compiles, and the dependency is under control:</p>
+
+<pre>$ gpk ld
+
+LIST OF DECLARED DEPENDENCIES:
+        google.com/appengine                     1.7.3
+        ericaro.net/gopack                       1.0.0-beta.1
+</pre>
+
+<p>'gpk ld' is short for 'gpk list-dependencies'
+</p>
+
+<pre>$ gpk lp -l
+
+LIST OF PACKAGES:
+        google.com/appengine                     1.7.3
+        code.google.com/p/goprotobuf/proto       default
+        ericaro.net/gopack                       1.0.0-beta.1
+
+</pre>
+
+<p></p>
+
+<ul>
+<li>'gpk lp' is short for 'gpk list-package'</li>
+<li>-l stands for 'list' by default 'gpk lp' prints the dependencies in a GOPATH way
+</li>
+</ul><p><strong>Tip</strong> </p>
+
+<p>Typing
+           </p><pre>alias GP='export GOPATH=<code>gpk lp</code>'</pre>
+In your shell is an easy way to to get an automatic GOPATH setter.
+        </section>
+
+        <footer>
+          Gopack is maintained by <a href="https://github.com/eatienza">eatienza</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
