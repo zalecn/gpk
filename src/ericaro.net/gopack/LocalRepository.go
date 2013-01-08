@@ -137,7 +137,8 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 		return
 	}
 	//makes the copy
-	walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
+	p.self.ScanProjectSrc(dst, dirHandler, fileHandler)
+	//walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
 	p.self.workingDir = dst
 	p.Write()
 	return

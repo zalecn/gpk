@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -123,6 +124,52 @@ func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 	return
 }
 
+//ScanProjectSrc recursively walk into src directory  and fire callbacks to dirHandler, and fileHandler
+// dirHandler is called on every directory dst beeing a join between the path passed at first, and the relative path to the current directory, and src and absolute one. 
+// fileHandler is called on every source file. For now source files are just .go files
+// dst is just a path that is used as root for the dst path in the handler.
+// for instance, if you scan a dir in you prj src/foo/bar and you initially passed a path "toto" then, handlers will be called with toto/src/foo/bar 
+func (p *Project) ScanProjectSrc(dst string, dirHandler, srcHandler func(dst, src string) error) error {
+	src := filepath.Join(p.WorkingDir(), "src")
+	dst = filepath.Join(dst, "src")
+	return scanProjectSrc(dst, src, dirHandler, srcHandler)
+}
+
+// recursive impl of eponym function
+func scanProjectSrc(dst, src string, dirHandler, srcHandler func(dst, src string) error) error {
+	if dirHandler != nil {
+		dirHandler(dst, src)
+	}
+
+	file, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	subdir, err := file.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range subdir {
+		switch {
+
+		case fi.IsDir():
+			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
+			err = scanProjectSrc(ndst, nsrc, dirHandler, srcHandler)
+			if err != nil {
+				return err
+			}
+		case strings.HasSuffix(fi.Name(), ".go"):
+			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
+			err := srcHandler(ndst, nsrc)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 //UnmarshalJSON part of the json protocol
 func (p *Project) UnmarshalJSON(data []byte) (err error) {
 	type ProjectFile struct { // TODO append a version number to make it possible to handle "format upgrade"
@@ -158,9 +205,9 @@ func (p *Project) MarshalJSON() ([]byte, error) {
 	}
 	pf := ProjectFile{
 		FormatVersion: GpkFileVersion,
-		Name:         p.name,
-		Dependencies: p.dependencies,
-		License:      p.license.FullName,
+		Name:          p.name,
+		Dependencies:  p.dependencies,
+		License:       p.license.FullName,
 	}
 	return json.Marshal(pf)
 }

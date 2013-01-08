@@ -142,7 +142,9 @@ func (p *Package) Pack(w io.Writer) (err error) {
 		err = TarFile(ldst, lsrc, tw)
 		return
 	}
-	walkDir("src", filepath.Join(p.self.workingDir, "src"), dirHandler, fileHandler)
+	// same remark as the "install" function
+	p.self.ScanProjectSrc("", dirHandler, fileHandler )
+	//walkDir("src", filepath.Join(p.self.workingDir, "src"), dirHandler, fileHandler)
 	// copy the package .gpk
 	TarFile(filepath.Join("", GpkFile), filepath.Join(p.self.workingDir, GpkFile), tw)
 	return
