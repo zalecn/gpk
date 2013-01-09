@@ -17,7 +17,7 @@ import (
 
 const (
 	Cmd               = "gpk"
-	GopackageVersion  = "1.0.0-beta.3" //?
+	GopackageVersion  = "master" //? I really would like this content to be handled by gpk itself ...
 	DefaultRepository = ".gpkrepository"
 	
 

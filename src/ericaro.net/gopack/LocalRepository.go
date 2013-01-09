@@ -122,10 +122,11 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	dst := filepath.Join(r.root, p.Path())
 	//	fmt.Printf("Installing to %s %s %s\n", r.root, p.Path(), dst)
 	_, err := os.Stat(dst)
-	if os.IsExist(err) { // also check for the local policy
+	if ! os.IsNotExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
+	
 
 	//prepare recursive handlers
 	dirHandler := func(ldst, lsrc string) (err error) {
