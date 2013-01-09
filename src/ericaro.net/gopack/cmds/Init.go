@@ -4,6 +4,7 @@ import (
 	. "ericaro.net/gopack"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func init() {
@@ -15,6 +16,7 @@ func init() {
 
 var initNameFlag *string
 var initLicenseFlag *string
+var initCreateSrcFlag *bool
 
 var Init = Command{
 	Name:      `init`,
@@ -42,6 +44,7 @@ var Init = Command{
 	FlagInit: func(Init *Command) {
 		initNameFlag = Init.Flag.String("n", "", "sets the project name")
 		initLicenseFlag = Init.Flag.String("l", "", "sets the project's license.")
+		initCreateSrcFlag = Init.Flag.Bool("c", false, "Creates the directory structure")
 	},
 	Run: func(Init *Command) (err error) {
 		// init does not require a project => I need to parse it myself and ignore failure
@@ -85,6 +88,17 @@ var Init = Command{
 
 		Init.Project = p // in case we implement sequence of commands (in the future)
 		p.Write()        // store it  one day I'll implement a lock on this file, right ?
+		
+		
+		if *initCreateSrcFlag{
+			dst := filepath.Join(p.WorkingDir() )
+			
+			os.MkdirAll(filepath.Join(dst, "bin"), os.ModeDir|os.ModePerm) // mkdir -p
+			os.MkdirAll(filepath.Join(dst, "pkg"), os.ModeDir|os.ModePerm) // mkdir -p
+			os.MkdirAll(filepath.Join(dst, "src", p.Name()), os.ModeDir|os.ModePerm) // mkdir -p
+			
+			
+		}
 		return
 	},
 }
