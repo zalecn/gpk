@@ -50,7 +50,7 @@ var Init = Command{
 		// init does not require a project => I need to parse it myself and ignore failure
 		p, err := ReadProject()
 		if err == nil {
-			fmt.Printf("warning: init an existing project. This is fine if you wanted to edit it\n")
+			fmt.Printf("warning: init an existing project %s. This is fine if you wanted to edit it\n", p.WorkingDir() )
 		}
 		pwd, err := os.Getwd()
 		if err != nil {

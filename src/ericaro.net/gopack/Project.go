@@ -27,7 +27,7 @@ type Project struct {
 	// TO be added build time , and test dependencies
 }
 
-//ReadProject read project from the current dir
+//ReadProject read project from the current dir, or parent's one (recursively)
 func ReadProject() (p *Project, err error) {
 	p = &Project{}
 	path, err := os.Getwd()
@@ -38,8 +38,11 @@ func ReadProject() (p *Project, err error) {
 	}
 	if path != "/" {
 		err = JsonReadFile(filepath.Join(path, GpkFile), p)
-	}
-	p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) // TODO try a up dir lookup
+		p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) 
+	} else{ // return a new empty prj set using the current dir
+		p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile))
+		err = errors.New("no .gpk file found in the current working directory hierarchy.")
+	} 
 	return
 }
 
