@@ -102,8 +102,8 @@ func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 	is := make([]int, 0, len(src))
 	for i, r := range src {
 		if r.Name() == name {
-			ref = &r
 			is = append(is, i)
+			ref = NewProjectID(name, r.Version())
 		}
 	}
 	length := len(is)
@@ -122,6 +122,14 @@ func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 		s, e := is[j]+1, is[j+1]
 		dep = append(dep, src[s:e]...)
 	}
+	// oops forget to finish the stuf
+	
+	s,e :=is[length-1]+1, len(src) 
+	if s < len(src) { // the last removed, is not the last in the src , copy the trailing stuff
+		dep = append(dep, src[s:e]...)
+	}
+	
+	
 	// last bit of slice
 	p.dependencies = dep
 	return
