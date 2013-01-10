@@ -81,9 +81,13 @@ func (g *GoEnv) Install(root string, all bool) (err error){
 	return
 }
 // Wrapper around go test command
-func (g *GoEnv) Test(root string) (err error){
-
-	cmd := exec.Command("go", "test",  "./src/...")
+func (g *GoEnv) Test(root, wd string, args []string) (err error){
+	
+	arguments := make([]string, 0, len(args)+2)
+	arguments = append(arguments, "test")
+	arguments = append(arguments, args...)
+	 
+	cmd := exec.Command("go",  arguments...)//"./src/...")
 
 	locals := map[string]string{
 		"GOPATH": Join(g.gopath, root),
@@ -93,7 +97,7 @@ func (g *GoEnv) Test(root string) (err error){
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = root // asbolute path of the project
+	cmd.Dir = wd // absolute path of the project
 	err = cmd.Run()
 	return
 }

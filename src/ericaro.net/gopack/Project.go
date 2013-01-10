@@ -37,12 +37,14 @@ func ReadProject() (p *Project, err error) {
 	for ; !FileExists(filepath.Join(path, GpkFile)) && path != "/"; path = filepath.Dir(path) {
 	}
 	if path != "/" {
-		err = JsonReadFile(filepath.Join(path, GpkFile), p)
-		p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile)) 
-	} else{ // return a new empty prj set using the current dir
+
+		gpk := filepath.Join(path, GpkFile)
+		err = JsonReadFile(gpk, p)
+		p.workingDir, _ = filepath.Abs(filepath.Dir(gpk))
+	} else { // return a new empty prj set using the current dir
 		p.workingDir, _ = filepath.Abs(filepath.Dir(GpkFile))
 		err = errors.New("no .gpk file found in the current working directory hierarchy.")
-	} 
+	}
 	return
 }
 
@@ -123,13 +125,12 @@ func (p *Project) RemoveDependency(name string) (ref *ProjectID) {
 		dep = append(dep, src[s:e]...)
 	}
 	// oops forget to finish the stuf
-	
-	s,e :=is[length-1]+1, len(src) 
+
+	s, e := is[length-1]+1, len(src)
 	if s < len(src) { // the last removed, is not the last in the src , copy the trailing stuff
 		dep = append(dep, src[s:e]...)
 	}
-	
-	
+
 	// last bit of slice
 	p.dependencies = dep
 	return

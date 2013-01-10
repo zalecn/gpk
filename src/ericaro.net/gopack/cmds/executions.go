@@ -5,6 +5,8 @@ package cmds
 import (
 	. "ericaro.net/gopack"
 	"ericaro.net/gopack/gocmd"
+	"os"
+	"log"
 )
 
 func init() {
@@ -33,7 +35,7 @@ var Compile = Command{
 		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
 		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
 	},
-	Run: func(Compile *Command) (err error){
+	Run: func(Compile *Command) (err error) {
 		// parse dependencies, and build the gopath
 		dependencies, err := Compile.Repository.ResolveDependencies(Compile.Project, *compileOfflineFlag, *compileUpdateFlag)
 		if err != nil {
@@ -75,9 +77,23 @@ var Test = Command{
 			ErrorStyle.Printf("Invalid dependency:\n    \u21b3 %v", err)
 			return
 		}
+		// make two cases, either I'm on the root dir, then the package is ./src/... or I'm within the project 
+		// and the packages path is ./...
+
+		wd, err := os.Getwd()
+		// use cwd as root, unless it is in the workding dir
+		var wdi, pwdi os.FileInfo
+		wdi, err = os.Stat(wd)
+		pwdi, err = os.Stat(Test.Project.WorkingDir())
 
 		goEnv := gocmd.NewGoEnv(gopath)
-		err = goEnv.Test(Test.Project.WorkingDir())
+		if os.SameFile(wdi, pwdi) { // if I'm on the project root dir, sources are in ./src/...
+			log.Printf("Running tests from root directory")
+			err = goEnv.Test(Test.Project.WorkingDir(), wd, []string{"./src/..."})
+		} else { // otherwise assume that you know what you are doing, and just recuse in ./...
+			log.Printf("Running tests from inside directory")
+			err = goEnv.Test(Test.Project.WorkingDir(), wd, []string{"./..."})
+		}
 		return
 	},
 }
