@@ -98,22 +98,19 @@ var Test = Command{
 		} else { // otherwise assume that you know what you are doing, and just recuse in ./...
 			args = []string{"./..."}
 		}
+
 		// check for -watch option
-
 		if *testWatchFlag > 0 {
-
 			c := time.Tick(100 * time.Millisecond)
-			for {
-				next := time.Now()
-				for now := range c {
-					if now.After(next) {
-						next = now.Add(*testWatchFlag)
-						NormalStyle.Clear()
-						err = goEnv.Test(Test.Project.WorkingDir(), wd, args)
-						fmt.Printf("\n")
-					}
-					fmt.Printf("■")
+			next := time.Now()
+			for now := range c {
+				if now.After(next) {
+					next = now.Add(*testWatchFlag)
+					NormalStyle.Clear()
+					err = goEnv.Test(Test.Project.WorkingDir(), wd, args)
+					fmt.Printf("\n")
 				}
+				fmt.Printf("■")
 			}
 
 		} else {
