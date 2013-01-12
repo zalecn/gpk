@@ -41,6 +41,11 @@ type PFormat struct {
 func (f *PFormat) Printf(message string, v ...interface{}) {
 	fmt.Print( f.Sprintf(message, v...) )
 }
+
+func (f *PFormat) Clear() {
+	fmt.Printf("%c[1;1H%c[2J", 0x1B, 0x1B )
+}
+
 func (f *PFormat) Sprintf(message string, v ...interface{}) string{
 	return fmt.Sprintf("%c[%d;%d;%dm%s%c[%dm", 0x1B, f.Attr, f.Foreground+30, f.Background+40, fmt.Sprintf(message, v...), 0x1B, 0)
 }
