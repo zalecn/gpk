@@ -116,6 +116,9 @@ var Test = Command{
 				}
 			}
 
+		} else {
+			// single run
+			err = goEnv.Test(Test.Project.WorkingDir(), wd, args)
 		}
 
 		return
