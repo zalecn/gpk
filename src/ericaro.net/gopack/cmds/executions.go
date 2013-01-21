@@ -5,8 +5,9 @@ package cmds
 import (
 	. "ericaro.net/gopack"
 	"ericaro.net/gopack/gocmd"
+	"fmt"
 	"os"
-	"log"
+	"time"
 )
 
 func init() {
@@ -54,6 +55,7 @@ var Compile = Command{
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////:
 
+var testWatchFlag *time.Duration
 var Test = Command{
 	Name:           `test`,
 	Alias:          `t`,
@@ -62,6 +64,9 @@ var Test = Command{
 	Short:          `Run go test`,
 	Long:           `Run go test on the whole project.`, // TODO add options to select the package to be executed
 	RequireProject: true,
+	FlagInit: func(Compile *Command) {
+		testWatchFlag = Compile.Flag.Duration("w", 0, "watch. Repeat the command for ever every watched seconds")
+	},
 	Run: func(Test *Command) (err error) {
 
 		// parse dependencies, and build the gopath
@@ -87,13 +92,32 @@ var Test = Command{
 		pwdi, err = os.Stat(Test.Project.WorkingDir())
 
 		goEnv := gocmd.NewGoEnv(gopath)
+		var args []string
 		if os.SameFile(wdi, pwdi) { // if I'm on the project root dir, sources are in ./src/...
-			log.Printf("Running tests from root directory")
-			err = goEnv.Test(Test.Project.WorkingDir(), wd, []string{"./src/..."})
+			args = []string{"./src/..."}
 		} else { // otherwise assume that you know what you are doing, and just recuse in ./...
-			log.Printf("Running tests from inside directory")
-			err = goEnv.Test(Test.Project.WorkingDir(), wd, []string{"./..."})
+			args = []string{"./..."}
 		}
+		// check for -watch option
+
+		if *testWatchFlag > 0 {
+
+			c := time.Tick(100 * time.Millisecond)
+			for {
+				next := time.Now()
+				for now := range c {
+					if now.After(next) {
+						next = now.Add(*testWatchFlag)
+						NormalStyle.Clear()
+						err = goEnv.Test(Test.Project.WorkingDir(), wd, args)
+						fmt.Printf("\n")
+					}
+					fmt.Printf("■")
+				}
+			}
+
+		}
+
 		return
 	},
 }
