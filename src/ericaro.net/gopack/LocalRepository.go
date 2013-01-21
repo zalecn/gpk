@@ -301,7 +301,7 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	if ! os.IsNotExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
 	}
-	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
+	err = os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
 	if err != nil {
 		log.Printf("Cannot install package %s", err)
 		return

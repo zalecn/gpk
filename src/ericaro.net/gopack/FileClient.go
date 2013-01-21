@@ -34,7 +34,7 @@ func NewFileClient(name string, u url.URL, token *protocol.Token) (r protocol.Cl
 
 func (c *FileClient) Push(pid protocol.PID, r io.Reader) (err error) {
 	//dst := filepath.Join(c.repo.Root(), pid.Path())
-	c.repo.Install(r)
+	_, err = c.repo.Install(r)
 	return
 }
 
