@@ -296,7 +296,16 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 		//log.Printf("Cannot read package", err)
 		return
 	}
-	prj.self.workingDir = filepath.Join(r.root, prj.self.name, prj.version.String())
+	dst := filepath.Join(r.root, prj.self.name, prj.version.String())
+	
+	_, err = os.Stat(dst)
+	if ! os.IsNotExist(err) { // also check for the local policy
+		os.RemoveAll(dst)
+	}
+	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
+	
+	
+	prj.self.workingDir = dst
 	mem = bytes.NewReader(buf.Bytes())
 	err = prj.Unpack(mem) // now I know the target I can unpack it.
 	//	if err != nil {
