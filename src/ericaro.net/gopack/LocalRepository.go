@@ -297,13 +297,15 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 		return
 	}
 	dst := filepath.Join(r.root, prj.self.name, prj.version.String())
-	
 	_, err = os.Stat(dst)
 	if ! os.IsNotExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
-	
+	if err != nil {
+		log.Printf("Cannot install package %s", err)
+		return
+	}
 	
 	prj.self.workingDir = dst
 	mem = bytes.NewReader(buf.Bytes())
