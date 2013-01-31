@@ -37,11 +37,18 @@ func (p LocalRepository) Write() (err error) {
 //NewLocalRepository creates a new Empty LocalRepository on the current dir, does not overwrite the actual contect, but read it
 func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	root, err = filepath.Abs(filepath.Clean(root))
-	dst := filepath.Join(root, GpkrepositoryFile)
 	if err != nil {
 		return
 	}
+	
+	
+	_, err = os.Stat(root)
+	if os.IsNotExist(err) { 
+		os.MkdirAll(root, os.ModeDir|os.ModePerm) // mkdir -p
+	}
+	
 
+	dst := filepath.Join(root, GpkrepositoryFile)
 	r = &LocalRepository{
 		root:    root,
 		remotes: make([]protocol.Client, 0),
