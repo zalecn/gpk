@@ -14,6 +14,7 @@ func init() {
 	Reg(
 		&Compile,
 		&Test,
+		//add package-compile, compile a package in the local repo
 	)
 
 }
