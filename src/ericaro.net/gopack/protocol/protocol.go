@@ -14,6 +14,7 @@ import (
 const ( // codes operations
 	FETCH  = "fetch"
 	PUSH   = "push"
+	PUSH_EXEC  = "pushx"
 	SEARCH = "search"
 )
 
@@ -49,6 +50,9 @@ type Server interface {
 	// you can use the pid to perform some quick checks before reading the package in r
 	//r is a reader to a tar.gzed stream containing the package and the .gpk
 	Receive(pid PID, r io.ReadCloser) error
+	
+	ReceiveExecutables(pid PID, r io.ReadCloser) error
+	
 	//Serve is expected to find the package and write it down to the the writer interface.
 	// w must be a tar.gzed stream containing all the package structure, and a .gpk file
 	Serve(pid PID, w io.Writer) error
@@ -65,6 +69,9 @@ func Handle(p string, s Server) { HandleMux(p, s, http.DefaultServeMux) }
 func HandleMux(p string, s Server, mux *http.ServeMux) {
 	mux.HandleFunc(path.Join(p, PUSH), func(w http.ResponseWriter, r *http.Request) {
 		servePush(s, w, r)
+	})
+	mux.HandleFunc(path.Join(p, PUSH_EXEC), func(w http.ResponseWriter, r *http.Request) {
+		serveBuilt(s, w, r)
 	})
 	mux.HandleFunc(path.Join(p, FETCH), func(w http.ResponseWriter, r *http.Request) {
 		serveFetch(s, w, r)
@@ -91,6 +98,33 @@ func servePush(s Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = s.Receive(*pid, r.Body) // create and fill the blob
+	if err != nil {
+		http.Error(w, err.Error(), ErrorCode(err))
+		log.Printf("%s Receive Error. %s", PUSH, err)
+	}
+	// can pass the reason as body response)
+	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	//	fmt.Fprintln(w, error)
+
+}
+
+//Receive HandlerFunc that s
+func serveBuilt(s Server, w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" { // on the built URL only POST method are supported
+		http.Error(w, "Method not supported.", http.StatusMethodNotAllowed)
+		log.Printf("%s not a POST request. %s instead", PUSH_EXEC, r.Method)
+		return
+	}
+
+	// identify the package
+	vals := r.URL.Query()
+	pid, err := FromParameter(&vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s invalid parameters. %s", PUSH, err)
+		return
+	}
+	err = s.ReceiveExecutables(*pid, r.Body) // create and fill the blob
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
 		log.Printf("%s Receive Error. %s", PUSH, err)

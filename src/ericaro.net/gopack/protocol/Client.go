@@ -35,6 +35,10 @@ type Client interface {
 	//Push will send what's in the reader to the remote.
 	//r is expected to be a tar.gz stream containing all the packages files, including the .gpk
 	Push(pid PID, r io.Reader) (err error)
+	
+	//PushExecutables send the content of ./bin directory. If the build is cross platform, every binary is expected to be in the right directory
+	PushExecutables(pid PID, r io.Reader) (err error)
+	
 	//Search run a search query on the remote. The exact meaning of "query" is free ( remote can implement operators if they want).
 	// start is the offset where the start sending the results.
 	// result is a slice of PID returned. The number of returned result is free (usually limited to 10)

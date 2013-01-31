@@ -7,7 +7,6 @@ import (
 	"ericaro.net/gopack/semver"
 	"fmt"
 	"net/url"
-	
 )
 
 func init() {
@@ -20,7 +19,7 @@ func init() {
 
 }
 
-var serverAddrFlag *string 
+var serverAddrFlag *string
 
 var Serve = Command{
 	Name:      `serve`,
@@ -32,9 +31,9 @@ var Serve = Command{
        ADDR usually ':8080' `,
 	RequireProject: false, // false if we add the options to set which the local repo
 	FlagInit: func(Serve *Command) {
-	serverAddrFlag  = Serve.Flag.String("s", ":8080", "Serve the current local repository as a remote one for others to use.")
+		serverAddrFlag = Serve.Flag.String("s", ":8080", "Serve the current local repository as a remote one for others to use.")
 	},
-	Run: func(Serve *Command)  (err error){
+	Run: func(Serve *Command) (err error) {
 
 		// run the go build command for local src, and with the appropriate gopath
 
@@ -50,6 +49,7 @@ var Serve = Command{
 
 //var deployAddrFlag *string = Push.Flag.String("to", "central", "deploy to a specific remote repository.")
 //var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
+var pushExecutables *bool
 var Push = Command{
 	Name:      `push`,
 	Alias:     `push`,
@@ -58,9 +58,13 @@ var Push = Command{
 	Long: `Push a project in a remote repository
        REMOTE  a remote name in the remote list
        PACKAGE a package available in the local repository (use search to list them)
-       VERSION a semantic version of the PACKAGE available in the local repository`,
+       VERSION a semantic version of the PACKAGE available in the local repository
+       `,
 	RequireProject: false,
-	Run: func(Push *Command)  (err error){
+	FlagInit: func(Push *Command) {
+		pushExecutables = Push.Flag.Bool("x", false, "pushes executables instead.")
+	},
+	Run: func(Push *Command) (err error) {
 		rem := Push.Flag.Arg(0)
 		remote, err := Push.Repository.Remote(rem)
 		if err != nil {
@@ -99,10 +103,16 @@ var Push = Command{
 
 		// read it in memory (tar.gz)
 		buf := new(bytes.Buffer)
-		pkg.Pack(buf)
 
-		// and finally push the buffer
-		err = remote.Push(pid, buf)
+		if *pushExecutables {
+			pkg.PackExecutables(buf) // pack either exec or src
+			// and finally push the buffer
+			err = remote.PushExecutables(pid, buf) // either exec or src		
+		} else {
+			pkg.Pack(buf) // pack either exec or src
+			// and finally push the buffer
+			err = remote.Push(pid, buf) // either exec or src
+		}
 		if err != nil {
 			ErrorStyle.Printf("Error from the remote while pushing.\n    \u21b3 %s\n", err)
 			// TODO as soon as I've got some search capability display similar results
@@ -128,7 +138,7 @@ var Push = Command{
 var AddRemote = Command{
 	Name:      `radd`,
 	Alias:     `r+`,
-	Category:       RemoteCategory,
+	Category:  RemoteCategory,
 	UsageLine: `NAME URL [TOKEN]`,
 	Short:     `Add a remote server.`,
 	Long: `Remote server can be used to publish or receive other's code.
@@ -138,7 +148,7 @@ var AddRemote = Command{
        TOKEN   option: a secret TOKEN identification provided by the server to deliver authentication.
                See with your server provider`,
 	RequireProject: false,
-	Run: func(AddRemote *Command)  (err error){
+	Run: func(AddRemote *Command) (err error) {
 
 		if len(AddRemote.Flag.Args()) < 2 || len(AddRemote.Flag.Args()) > 3 {
 			ErrorStyle.Printf("Illegal arguments count\n")
@@ -170,7 +180,7 @@ var AddRemote = Command{
 			stoken = fmt.Sprintf("%s", token)
 		}
 		err = AddRemote.Repository.RemoteAdd(client)
-		if err != nil{
+		if err != nil {
 			ErrorStyle.Printf("%s\n", err)
 			return
 		}
@@ -180,7 +190,6 @@ var AddRemote = Command{
 	},
 }
 
-
 var RemoveRemote = Command{
 	Name:           `rremove`,
 	Alias:          `r-`,
@@ -189,8 +198,7 @@ var RemoveRemote = Command{
 	Short:          `Remove a Remote`,
 	Long:           ``,
 	RequireProject: false,
-	Run: func(RemoveRemote *Command)  (err error){
-		
+	Run: func(RemoveRemote *Command) (err error) {
 
 		if len(RemoveRemote.Flag.Args()) != 1 {
 			RemoveRemote.Flag.Usage()
@@ -204,7 +212,7 @@ var RemoveRemote = Command{
 			return
 		}
 		if ref != nil {
-			u:= ref.Path()
+			u := ref.Path()
 			SuccessStyle.Printf("Removed Remote %s %s\n", ref.Name(), u.String())
 			RemoveRemote.Repository.Write()
 		} else {
@@ -214,11 +222,3 @@ var RemoveRemote = Command{
 		return
 	},
 }
-
-
-
-
-
-
-
-

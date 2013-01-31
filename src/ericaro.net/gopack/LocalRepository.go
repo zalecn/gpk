@@ -122,11 +122,10 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 	dst := filepath.Join(r.root, p.Path())
 	//	fmt.Printf("Installing to %s %s %s\n", r.root, p.Path(), dst)
 	_, err := os.Stat(dst)
-	if ! os.IsNotExist(err) { // also check for the local policy
+	if !os.IsNotExist(err) { // also check for the local policy
 		os.RemoveAll(dst)
 	}
 	os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
-	
 
 	//prepare recursive handlers
 	dirHandler := func(ldst, lsrc string) (err error) {
@@ -284,6 +283,14 @@ func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID) (
 //Install read a package in the reader (a tar.gzed stream, with a package .gpk inside and the project content)
 // find a suitable place for it ( name/version ) and replace the content
 func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
+	return r.install(true, reader)
+}
+
+func (r *LocalRepository) InstallAppend(reader io.Reader) (prj *Package, err error) {
+	return r.install(false, reader)
+}
+
+func (r *LocalRepository) install(clean bool, reader io.Reader) (prj *Package, err error) {
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, reader) // download the tar.gz
 	//reader.Close()
@@ -298,7 +305,7 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 	}
 	dst := filepath.Join(r.root, prj.self.name, prj.version.String())
 	_, err = os.Stat(dst)
-	if ! os.IsNotExist(err) { // also check for the local policy
+	if clean && !os.IsNotExist(err) { 
 		os.RemoveAll(dst)
 	}
 	err = os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p
@@ -306,7 +313,7 @@ func (r *LocalRepository) Install(reader io.Reader) (prj *Package, err error) {
 		log.Printf("Cannot install package %s", err)
 		return
 	}
-	
+
 	prj.self.workingDir = dst
 	mem = bytes.NewReader(buf.Bytes())
 	err = prj.Unpack(mem) // now I know the target I can unpack it.
@@ -342,7 +349,7 @@ func (p *LocalRepository) UnmarshalJSON(data []byte) (err error) {
 
 	type LocalRepositoryFile struct {
 		FormatVersion string
-		Remotes     []RemoteFile
+		Remotes       []RemoteFile
 	}
 	var pf LocalRepositoryFile
 	json.Unmarshal(data, &pf)
@@ -376,12 +383,12 @@ func (p *LocalRepository) MarshalJSON() ([]byte, error) {
 
 	type LocalRepositoryFile struct {
 		FormatVersion string
-		Remotes []RemoteFile
+		Remotes       []RemoteFile
 	}
 
 	pf := LocalRepositoryFile{
 		FormatVersion: GpkRepositoryFileVersion,
-		Remotes: make([]RemoteFile, len(p.remotes)),
+		Remotes:       make([]RemoteFile, len(p.remotes)),
 	}
 	for i := range p.remotes {
 		pr := p.remotes[i]
