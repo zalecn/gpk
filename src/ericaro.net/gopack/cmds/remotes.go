@@ -185,7 +185,7 @@ var AddRemote = Command{
 			ErrorStyle.Printf("%s\n", err)
 			return
 		}
-		SuccessStyle.Printf("new remote: %s %s %s\n", name, u, stoken)
+		SuccessStyle.Printf("       +%s %s %s\n", name, u, stoken)
 		AddRemote.Repository.Write()
 		return
 	},
