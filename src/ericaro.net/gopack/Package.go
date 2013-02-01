@@ -2,22 +2,20 @@
 package gopack
 
 import (
-	. "ericaro.net/gopack/semver"
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	. "ericaro.net/gopack/semver"
+	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"time"
-	"errors"
-	"fmt"
 )
-
 
 const (
 	GpkFile = ".gpk"
 )
-
 
 //Package represent a Go project packaged.
 // it includes a reference to a Project content , a version and the timestamp when it was created (for traceability and snapshot management)
@@ -30,8 +28,6 @@ type Package struct {
 	// add also go1 , i.e the target go runtime.
 
 }
-
-
 
 //ReadPackageFile local info from the specified gopackage file
 func ReadPackageFile(gpkPath string) (p *Package, err error) {
@@ -50,7 +46,7 @@ func (p *Package) Timestamp() time.Time {
 func (p *Package) Write() (err error) {
 	dst := filepath.Join(p.self.workingDir, GpkFile)
 	err = JsonWriteFile(dst, p)
-	return 
+	return
 }
 
 //InstallDir is the place where the package is installed
@@ -62,6 +58,7 @@ func (p *Package) InstallDir() string {
 func (p *Package) Name() string {
 	return p.self.name
 }
+
 //License the license driving this package.
 func (p *Package) License() License {
 	return p.self.License()
@@ -71,6 +68,7 @@ func (p *Package) License() License {
 func (p *Package) Dependencies() []ProjectID {
 	return p.self.Dependencies()
 }
+
 //Version this package semantic version
 func (p *Package) Version() Version {
 	return p.version
@@ -119,12 +117,27 @@ func ReadPackageInPackage(in io.Reader) (p *Package, err error) {
 
 //Unpack a Package in a reader (a tar.gzed stream) into its InstallDir directory
 func (p *Package) Unpack(in io.Reader) (err error) {
-	return  Unpack(p.self.workingDir, in)
-	
+	return Unpack(p.self.workingDir, in)
+
 }
 
 //Pack copy the current Package into a Writer. It with write it down in tar.gzed format
 func (p *Package) Pack(w io.Writer) (err error) {
+	return p.packType(PACK_SRC, w)
+}
+//Pack copy the current Package exec into a Writer. It with write it down in tar.gzed format
+func (p *Package) PackExecutables(w io.Writer) (err error) {
+	return p.packType(PACK_EXEC, w)
+}
+const (
+	PACK_SRC  = iota
+	PACK_EXEC = iota
+
+//PACK_PKG = iota
+
+)
+
+func (p *Package) packType(typ int, w io.Writer) (err error) {
 	gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 	if err != nil {
 		return
@@ -143,7 +156,13 @@ func (p *Package) Pack(w io.Writer) (err error) {
 		return
 	}
 	// same remark as the "install" function
-	p.self.ScanProjectSrc("", dirHandler, fileHandler )
+	switch typ {
+
+	case PACK_SRC:
+		p.self.ScanProjectSrc("", dirHandler, fileHandler)
+	case PACK_EXEC:
+		p.self.ScanBinPlatforms("", fileHandler)
+	}
 	//walkDir("src", filepath.Join(p.self.workingDir, "src"), dirHandler, fileHandler)
 	// copy the package .gpk
 	TarFile(filepath.Join("", GpkFile), filepath.Join(p.self.workingDir, GpkFile), tw)
@@ -166,6 +185,7 @@ func (p *Package) UnmarshalJSON(data []byte) (err error) {
 	p.version = v
 	return
 }
+
 //MarshalJSON part of the json protocol
 func (p *Package) MarshalJSON() ([]byte, error) {
 	type PackageFile struct {
@@ -174,9 +194,9 @@ func (p *Package) MarshalJSON() ([]byte, error) {
 		Timestamp time.Time
 	}
 	pf := PackageFile{
-		Self:         &p.self,
+		Self:      &p.self,
 		Timestamp: p.timestamp,
-		Version:      p.version.String(),
+		Version:   p.version.String(),
 	}
 	return json.Marshal(pf)
 }

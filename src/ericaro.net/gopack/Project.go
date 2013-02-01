@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -172,6 +173,63 @@ func scanProjectSrc(dst, src string, dirHandler, srcHandler func(dst, src string
 				return err
 			}
 		case strings.HasSuffix(fi.Name(), ".go"):
+			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
+			err := srcHandler(ndst, nsrc)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (p *Project) ScanBinPlatforms(dst string, srcHandler func(dst, src string) error) error {
+
+	src := filepath.Join(p.WorkingDir(), "bin")
+	dst = filepath.Join(dst, "bin")
+	// scan bin as the current platform
+
+	file, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	files, err := file.Readdir(-1)
+	if err != nil {
+		return err
+	}
+	// first scan the current bin as if it was in a bin/{platform} one
+	platform := runtime.GOOS + "_" + runtime.GOARCH
+	localdst := filepath.Join(dst, platform)
+	err = scanBinPlatform(localdst, src, files, srcHandler) // scan real files and add them in the bin/{current_platform}
+	if err != nil {
+		return err
+	}
+	
+	// then rescan only subdirs of bin
+	
+	for _, fi := range files {
+		if fi.IsDir() {
+			// this is a platform actually
+			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
+			nfile, err := os.Open(nsrc)
+			nfiles, err := nfile.Readdir(-1)
+			if err != nil {
+				return err
+			}
+			scanBinPlatform(ndst, nsrc, nfiles, srcHandler)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+// recursive impl of eponym function
+func scanBinPlatform(dst, src string, files []os.FileInfo, srcHandler func(dst, src string) error) error {
+	for _, fi := range files {
+		if !fi.IsDir() {
 			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
 			err := srcHandler(ndst, nsrc)
 			if err != nil {

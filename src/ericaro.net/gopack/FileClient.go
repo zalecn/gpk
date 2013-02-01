@@ -38,6 +38,12 @@ func (c *FileClient) Push(pid protocol.PID, r io.Reader) (err error) {
 	return
 }
 
+func (c *FileClient) PushExecutables(pid protocol.PID, r io.Reader) (err error) {
+	//dst := filepath.Join(c.repo.Root(), pid.Path())
+	_, err = c.repo.InstallAppend(r)
+	return
+}
+
 func (r *FileClient) Search(query string, start int) (result []protocol.PID) {
 	return r.repo.Search(query, start)
 }

@@ -35,7 +35,13 @@ func (s *HttpServer) Receive(pid protocol.PID, r io.ReadCloser) (err error)     
 	log.Printf("RECEIVING %s %s %s INTO %s",pak.Name(), pak.Version().String(), pak.License(), pak.InstallDir() )
 	return
 }
-
+//Contains return true if the server contains the ProjectID
+func (s *HttpServer) ReceiveExecutables(pid protocol.PID, r io.ReadCloser) (err error)            {
+	pak, err := s.Local.InstallAppend(r)
+	if err != nil {return}
+	log.Printf("RECEIVING %s %s %s INTO %s",pak.Name(), pak.Version().String(), pak.License(), pak.InstallDir() )
+	return
+}
 func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (err error)                    {
 //func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
 	id := *NewProjectID(pid.Name,pid.Version)
