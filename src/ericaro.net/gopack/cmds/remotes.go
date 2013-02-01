@@ -49,7 +49,6 @@ var Serve = Command{
 
 //var deployAddrFlag *string = Push.Flag.String("to", "central", "deploy to a specific remote repository.")
 //var pushRecursiveFlag *bool = Push.Flag.Bool("r", false, "Also pushes package's dependencies.")
-var pushExecutables *bool
 var Push = Command{
 	Name:      `push`,
 	Alias:     `push`,
@@ -62,7 +61,6 @@ var Push = Command{
        `,
 	RequireProject: false,
 	FlagInit: func(Push *Command) {
-		pushExecutables = Push.Flag.Bool("x", false, "pushes executables instead.")
 	},
 	Run: func(Push *Command) (err error) {
 		rem := Push.Flag.Arg(0)
@@ -103,16 +101,9 @@ var Push = Command{
 
 		// read it in memory (tar.gz)
 		buf := new(bytes.Buffer)
-
-		if *pushExecutables {
-			pkg.PackExecutables(buf) // pack either exec or src
-			// and finally push the buffer
-			err = remote.PushExecutables(pid, buf) // either exec or src		
-		} else {
-			pkg.Pack(buf) // pack either exec or src
-			// and finally push the buffer
-			err = remote.Push(pid, buf) // either exec or src
-		}
+		pkg.Pack(buf) // pack either exec or src
+		// and finally push the buffer
+		err = remote.Push(pid, buf) // either exec or src
 		if err != nil {
 			ErrorStyle.Printf("Error from the remote while pushing.\n    \u21b3 %s\n", err)
 			// TODO as soon as I've got some search capability display similar results
@@ -122,7 +113,6 @@ var Push = Command{
 		return
 	},
 }
-
 
 //var Get = Command{
 //	Name:           `goget`,
