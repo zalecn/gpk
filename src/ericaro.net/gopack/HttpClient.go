@@ -66,6 +66,9 @@ func (c *HttpClient) Push(pid protocol.PID, r io.Reader) (err error) {
 	}
 	req.ContentLength = int64(buf.Len()) // fuck I can't do that, I need to compute the length first
 	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return errors.New(resp.Status)
 	}

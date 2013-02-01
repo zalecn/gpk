@@ -45,6 +45,7 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	_, err = os.Stat(root)
 	if os.IsNotExist(err) { 
 		os.MkdirAll(root, os.ModeDir|os.ModePerm) // mkdir -p
+		err = nil
 	}
 	
 
