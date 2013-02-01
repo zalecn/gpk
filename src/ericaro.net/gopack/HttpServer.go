@@ -44,6 +44,7 @@ func (s *HttpServer) ReceiveExecutables(pid protocol.PID, r io.ReadCloser) (err 
 }
 func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (err error)                    {
 //func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
+	log.Printf("SERVING %s %s",pid.Name, pid.Version.String())
 	id := *NewProjectID(pid.Name,pid.Version)
 	p, err := s.Local.FindPackage(id)
 	if err != nil {
