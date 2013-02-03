@@ -45,6 +45,7 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	_, err = os.Stat(root)
 	if os.IsNotExist(err) { 
 		os.MkdirAll(root, os.ModeDir|os.ModePerm) // mkdir -p
+		err = nil
 	}
 	
 
@@ -74,9 +75,12 @@ func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error
 
 //RemoteAdd append a remote to the list, refuse to append if there is a remote with that name already
 func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
-	for _, r := range p.remotes {
+	for _, r := range p.remotes[:]  { // operate on a copy of the remotes
 		if strings.EqualFold(remote.Name(), r.Name()) {
-			return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
+			p.RemoteRemove(remote.Name() )
+			u := r.Path()
+			SuccessStyle.Printf("       -%s %s\n", remote.Name(), u.String())
+			//return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
 		}
 	}
 	p.remotes = append(p.remotes, remote)

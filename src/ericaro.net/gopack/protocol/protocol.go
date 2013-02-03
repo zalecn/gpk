@@ -14,7 +14,6 @@ import (
 const ( // codes operations
 	FETCH  = "fetch"
 	PUSH   = "push"
-	PUSH_EXEC  = "pushx"
 	SEARCH = "search"
 )
 
@@ -32,7 +31,7 @@ var (
 	StatusForbidden         = &ProtocolError{"Forbidden Operation", http.StatusForbidden}
 	StatusIdentityMismatch  = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
 	StatusCannotOverwrite   = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
-	StatusMissingDependency = &ProtocolError{"Missing Dependency", http.StatusPartialContent}
+	StatusMissingDependency = &ProtocolError{"Missing Dependency", http.StatusNotAcceptable}
 )
 
 // convert any error into a suitable error code. it uses http.StatusInternalServerError if this is not a protocol error
@@ -70,9 +69,6 @@ func HandleMux(p string, s Server, mux *http.ServeMux) {
 	mux.HandleFunc(path.Join(p, PUSH), func(w http.ResponseWriter, r *http.Request) {
 		servePush(s, w, r)
 	})
-	mux.HandleFunc(path.Join(p, PUSH_EXEC), func(w http.ResponseWriter, r *http.Request) {
-		serveBuilt(s, w, r)
-	})
 	mux.HandleFunc(path.Join(p, FETCH), func(w http.ResponseWriter, r *http.Request) {
 		serveFetch(s, w, r)
 	})
@@ -108,32 +104,6 @@ func servePush(s Server, w http.ResponseWriter, r *http.Request) {
 
 }
 
-//Receive HandlerFunc that s
-func serveBuilt(s Server, w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" { // on the built URL only POST method are supported
-		http.Error(w, "Method not supported.", http.StatusMethodNotAllowed)
-		log.Printf("%s not a POST request. %s instead", PUSH_EXEC, r.Method)
-		return
-	}
-
-	// identify the package
-	vals := r.URL.Query()
-	pid, err := FromParameter(&vals)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("%s invalid parameters. %s", PUSH, err)
-		return
-	}
-	err = s.ReceiveExecutables(*pid, r.Body) // create and fill the blob
-	if err != nil {
-		http.Error(w, err.Error(), ErrorCode(err))
-		log.Printf("%s Receive Error. %s", PUSH, err)
-	}
-	// can pass the reason as body response)
-	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	//	fmt.Fprintln(w, error)
-
-}
 
 func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 	vals := r.URL.Query()

@@ -159,7 +159,10 @@ func Gopack() {
 func NewDefaultRepository() (r *LocalRepository, err error) {
 	path := *localRepositoryFlag
 	if !filepath.IsAbs(path) {
-		u, _ := user.Current()
+		u, err := user.Current()
+		if err != nil {
+		return nil, err
+		}
 		path = filepath.Join(u.HomeDir, *localRepositoryFlag)
 		path = filepath.Clean(path)
 	}

@@ -66,31 +66,9 @@ func (c *HttpClient) Push(pid protocol.PID, r io.Reader) (err error) {
 	}
 	req.ContentLength = int64(buf.Len()) // fuck I can't do that, I need to compute the length first
 	resp, err := client.Do(req)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return errors.New(resp.Status)
-	}
-	return
-}
-func (c *HttpClient) PushExecutables(pid protocol.PID, r io.Reader) (err error) {
-	v := &url.Values{}
-	pid.InParameter(v)
-	//query url
-	u := &url.URL{
-		Path:     protocol.PUSH_EXEC,
-		RawQuery: v.Encode(),
-	}
-
-	buf := new(bytes.Buffer)
-	io.Copy(buf, r)
-
-	var client http.Client
-	remote := c.Path()
-	req, err := http.NewRequest("POST", remote.ResolveReference(u).String(), buf)
 	if err != nil {
-		return
+		return err
 	}
-	req.ContentLength = int64(buf.Len()) 
-	resp, err := client.Do(req)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return errors.New(resp.Status)
 	}

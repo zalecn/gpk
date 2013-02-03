@@ -25,7 +25,7 @@ It can then deliver:
 Getting Started
 ============
 
-Version:   1.0.0.beta.1
+Version:   1.0.0.beta.3
 
 
 <small>
@@ -40,14 +40,14 @@ Linux
 --------
 
 <pre> 
-git clone git@github.com:eatienza/gopack.git
-cd gopack/
+git clone https://github.com/gopack/gpk.git
+cd gpk/
 export GOPATH=`pwd`
 go install ./src/...
 sudo cp ./bin/gpk /usr/bin/gpk
 </pre>
 
-Now you should have
+Now you should get something like
 <pre>$>gpk help</pre>
 
 <pre>
@@ -93,32 +93,67 @@ COMMANDS
 
        Type 'gpk help [COMMAND]' for more details about a command.
 </pre>
-
+ but prettier if you are using a vterm console
 
 Examples
 =========
 
+Hello World Project
+---------------
+
+The purpose is to show the smallest possible Helloworld project.
+Create the Workspace layout.
+<pre>
+$> mkdir test
+$> cd test
+$> gpk init -c -n mypath/test -l ASF
+    new name:mypath/test
+    new license:"Apache License 2.0"
+</pre>
+Creates the workspace, and the directory layout. Its time to populate it with the helloworld.go file
+<pre>
+$> vi src/mypath/test/helloworld.go
+</pre>
+Edit the helloworld.go file and make it:
+<pre>
+package main
+import "fmt"
+func main() {
+    fmt.Println("Hello, World")
+}
+</pre>
+
+Then Compile, and run
+<pre>
+$> gpk compile
+$> ./bin/test
+</pre>
+
+
 Client/Server
 -------------------
 
-On computer called 'querepare' lets start a server (it does not need to be on a specific directory)
+Purpose: show how to start a basic gopack package server.
+
+On computer called 'server' lets start a server (it does not need to be on a specific directory)
 <pre>
-eric@querepare:$ gpk serve
+eric@server:$ gpk serve
     starting server :8080
 </pre>
 It will by default expose the local repository
 
-On another computer called 'ubanoco' let's connect to this server
-<pre>eric@ubanoco:$ gpk r+ quere http://192.168.0.30:8080
+On another computer called 'client' let's connect to this server
+<pre>eric@client:$ gpk r+ server http://192.168.0.30:8080
     new remote: quere http://192.168.0.30:8080
 </pre>
 Lets search for stuff in it
-<pre>eric@ubanoco:$gpk search -r quere ericaro.net</pre>
+<pre>eric@client:$gpk search -r server ericaro.net</pre>
 the result list is empty
 
-Let's install the current project (gopack) as "0.0.0-master" in the local repository of ubanoco, and push it to quere
-<pre>eric@ubanoco:$ gpk install master</pre>
-<pre>eric@ubanoco:$ gpk push quere ericaro.net/gopack master
+Let's install the current project (gopack) as "0.0.0-master" in the local repository of "client", and push it to "server"
+I assume that I'm on a project called ericaro.net/gopack
+<pre>eric@client:$ gpk install master</pre>
+<pre>eric@server:$ gpk push server ericaro.net/gopack master
 Success
 </pre>
 Note that "master" is a valid name for the [semantic version](http://semver.org) 0.0.0-master.
@@ -127,12 +162,11 @@ On the server side here is what has happened
 <pre>
 RECEIVING
        ericaro.net/gopack master GNU Lesser GPL INTO /home/eric/.gpkrepository/ericaro.net/gopack/master</pre>
-<small>due to issue #4 the output is not exactly the one above</small>
-
+</pre>
 
 Now, on the client side, if we search for package called ericaro.net we found one.
 
-<pre>eric@ubanoco:$ gpk s -r quere ericaro.net</pre>
+<pre>eric@client:$ gpk s -r server ericaro.net</pre>
 
 
 <h2>Dependencies</h2>
