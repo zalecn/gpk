@@ -183,6 +183,7 @@ func scanProjectSrc(dst, src string, dirHandler, srcHandler func(dst, src string
 	return nil
 }
 
+//ScanBinPlatforms scans the bin directory for binaries organized by platform (and yes it put the current platform in the right place)
 func (p *Project) ScanBinPlatforms(dst string, srcHandler func(dst, src string) error) error {
 
 	src := filepath.Join(p.WorkingDir(), "bin")

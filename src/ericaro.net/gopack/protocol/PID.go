@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"time"
+	"strconv"
 )
 
 //PID represent a Project ID through the internet. Can be either passed as parameter to a query, or returned as a list in a search result
@@ -14,6 +15,7 @@ type PID struct {
 	Name      string
 	Version   semver.Version
 	Timestamp *time.Time
+	Executables *bool // optional parameter, used to only fetch executables
 	Token     *Token // is optional
 }
 
@@ -46,9 +48,13 @@ func FromParameter(v *url.Values) (pid *PID, err error) {
 
 	t, err := time.Parse(time.ANSIC, v.Get("t"))
 	k, err := ParseURLToken(v.Get("k"))
+	x, _ := strconv.ParseBool(v.Get("x"))
+	
+	
 	
 	pid.Timestamp = &t
 	pid.Token = k
+	pid.Executables = &x
 	return
 }
 

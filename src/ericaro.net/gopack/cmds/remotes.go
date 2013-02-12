@@ -7,6 +7,7 @@ import (
 	"ericaro.net/gopack/semver"
 	"fmt"
 	"net/url"
+	"log"
 )
 
 func init() {
@@ -62,7 +63,7 @@ var Push = Command{
        `,
 	RequireProject: false,
 	FlagInit: func(Push *Command) {
-		pushExecutables = Push.Flag.Bool("x", false, "pushes executables instead.")
+		pushExecutables = Push.Flag.Bool("x", false, "pushes executables too.")
 	},
 	Run: func(Push *Command) (err error) {
 		rem := Push.Flag.Arg(0)
@@ -102,17 +103,21 @@ var Push = Command{
 		}
 
 		// read it in memory (tar.gz)
+		
 		buf := new(bytes.Buffer)
-
+		pkg.Pack(buf) // pack either exec or src
+		// and finally push the buffer
+		log.Printf("pushing sources\n")
+		err = remote.Push(pid, buf) // either exec or src
+		
 		if *pushExecutables {
-			pkg.PackExecutables(buf) // pack either exec or src
+			log.Printf("pushing executables\n")
+			buf := new(bytes.Buffer)
+			pkg.PackExecutables(buf) // pack both exec or src
 			// and finally push the buffer
 			err = remote.PushExecutables(pid, buf) // either exec or src		
-		} else {
-			pkg.Pack(buf) // pack either exec or src
-			// and finally push the buffer
-			err = remote.Push(pid, buf) // either exec or src
 		}
+		
 		if err != nil {
 			ErrorStyle.Printf("Error from the remote while pushing.\n    \u21b3 %s\n", err)
 			// TODO as soon as I've got some search capability display similar results

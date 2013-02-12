@@ -146,7 +146,6 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-
 	err = s.Serve(*pid, w)
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
