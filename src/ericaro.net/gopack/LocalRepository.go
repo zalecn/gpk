@@ -144,11 +144,14 @@ func (r *LocalRepository) InstallProject(prj *Project, v Version) (p *Package) {
 		return
 	}
 	fileHandler := func(ldst, lsrc string) (err error) {
+		p := filepath.Dir(ldst)
+		os.MkdirAll(p, os.ModeDir|os.ModePerm) // mkdir -p
 		_, err = CopyFile(ldst, lsrc)
 		return
 	}
 	//makes the copy
 	p.self.ScanProjectSrc(dst, dirHandler, fileHandler)
+	p.self.ScanBinPlatforms(dst, fileHandler)
 	//walkDir(filepath.Join(dst, "src"), filepath.Join(prj.workingDir, "src"), dirHandler, fileHandler)
 	p.self.workingDir = dst
 	p.Write()
