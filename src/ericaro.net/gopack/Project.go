@@ -205,9 +205,9 @@ func (p *Project) ScanBinPlatforms(dst string, srcHandler func(dst, src string) 
 	if err != nil {
 		return err
 	}
-	
+
 	// then rescan only subdirs of bin
-	
+
 	for _, fi := range files {
 		if fi.IsDir() {
 			// this is a platform actually
@@ -239,6 +239,49 @@ func scanBinPlatform(dst, src string, files []os.FileInfo, srcHandler func(dst, 
 		}
 	}
 	return nil
+}
+
+//scanPkg recursive scans the pkg directory for .a organized by platform
+func scanPkg(dst, src string, srcHandler func(dst, src string) error) error {
+
+	file, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	files, err := file.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range files {
+		ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
+		if fi.IsDir() {
+			err = scanPkg(ndst, nsrc, srcHandler)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := srcHandler(ndst, nsrc)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return nil // no error so far
+}
+
+//ScanPkg scans the pkg directory for .a organized by platform
+// convenient method to package the pkg in a tar.gz and send them to a server
+// but we need a way to store the pkg per golang version as they might not be compatible.
+// nevertheless golang is not ready for that (there is a bug that make the distribution of binaries only impossible).
+// this is a back code for later.
+func (p *Project) ScanPkg(dst string, srcHandler func(dst, src string) error) error {
+
+	src := filepath.Join(p.WorkingDir(), "pkg")
+	dst = filepath.Join(dst, "pkg")
+	return scanPkg(dst, src, srcHandler) // scan real files and add them in the bin/{current_platform}
+	
 }
 
 //UnmarshalJSON part of the json protocol
