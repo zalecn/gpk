@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"io/ioutil"
 )
 
 // reflect some basic go operations
@@ -78,6 +79,28 @@ func (g *GoEnv) Install(root string, all bool) (err error){
 	cmd.Stderr = os.Stderr
 	cmd.Dir = root // asbolute path of the project
 	err = cmd.Run()
+	return
+}
+
+//InstallTest wrap the go test -c command to compile test exe for a given package 
+// For the moment only -a option is available
+func (g *GoEnv) InstallTest(root, pack string) (err error){
+	var cmd *exec.Cmd
+	cmd = exec.Command("go", "test", "-c",  pack)
+	// extend the current env with my GOPATH variable
+	locals := map[string]string{
+		"GOPATH": Join(root, g.gopath),
+	}
+
+	cmd.Env = BuildEnv(locals)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout =  ioutil.Discard//Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = root // asbolute path of the project
+	err = cmd.Run()
+	if err != nil {
+		return
+	}
 	return
 }
 // Wrapper around go test command

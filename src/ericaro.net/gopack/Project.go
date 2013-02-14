@@ -281,7 +281,23 @@ func (p *Project) ScanPkg(dst string, srcHandler func(dst, src string) error) er
 	src := filepath.Join(p.WorkingDir(), "pkg")
 	dst = filepath.Join(dst, "pkg")
 	return scanPkg(dst, src, srcHandler) // scan real files and add them in the bin/{current_platform}
-	
+
+}
+
+//Packages returns the list of packages present in the src dir, and eventually containing tests
+func (p *Project) Packages() []string {
+	// srcDir is where to scan for sources imports
+	srcDir := filepath.Join(p.WorkingDir(), "src")
+	dirs, _ := ScanPackages(srcDir)
+	packages := make([]string, len(dirs))
+	for i, d := range dirs {
+		p, err := filepath.Rel(srcDir, d)
+		packages[i] = p
+		if err != nil {
+			panic(err)//really unexpected
+		}
+	}
+	return packages
 }
 
 //UnmarshalJSON part of the json protocol

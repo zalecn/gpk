@@ -7,7 +7,10 @@ import (
 	"ericaro.net/gopack/gocmd"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"time"
+	"log"
 )
 
 func init() {
@@ -23,6 +26,7 @@ func init() {
 var compileAllFlag *bool
 var compileOfflineFlag *bool
 var compileUpdateFlag *bool
+var compileSkipTestFlag *bool
 var Compile = Command{
 	Name:      `compile`,
 	Alias:     `c`,
@@ -36,6 +40,8 @@ var Compile = Command{
 		compileAllFlag = Compile.Flag.Bool("a", false, "all. Force rebuilding of packages that are already up-to-date.")
 		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
 		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
+
+		compileSkipTestFlag = Compile.Flag.Bool("s", false, "skip. Skip Test compilation")
 	},
 	Run: func(Compile *Command) (err error) {
 		// parse dependencies, and build the gopath
@@ -48,7 +54,48 @@ var Compile = Command{
 		gopath, err := Compile.Repository.GoPath(dependencies)
 
 		goEnv := gocmd.NewGoEnv(gopath)
-		err = goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag) // TODO finalize the effort to wrap all the go install command (even maybe go build)
+		err = goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag)
+
+		if !*compileSkipTestFlag {
+
+			//compute the GOOS that will be used by the test compiler (mainly to be crossplatform compliant
+			goos := runtime.GOOS //default value
+			if os.Getenv("GOOS") != "" {
+				goos = os.Getenv("GOOS")
+			}
+			
+			goarch := runtime.GOARCH //default value
+			if os.Getenv("GOARCH") != "" {
+				goarch = os.Getenv("GOARCH")
+			}
+
+			packages := Compile.Project.Packages() // list all packages
+			root := Compile.Project.WorkingDir()
+			for _, p := range packages {
+				log.Printf("compiling %s tests\n", p)
+				err = goEnv.InstallTest(root, p)
+				if err != nil {
+					return err
+				}
+				//infer the exe name
+				name := filepath.Base(p) + ".test"
+				if goos == "windows" {
+					name += ".exe"
+				}
+				// move the exe to the appropriate place
+				dst := filepath.Join(root, "bin", goos+"_"+goarch, name)
+				src := filepath.Join(root, name)
+				if FileExists(src) {
+					os.MkdirAll(filepath.Dir(dst) , os.ModeDir|os.ModePerm)
+					err = os.Rename(src, dst)
+					//_, err = CopyFile(dst, src)
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+
 		// also provide a go run equivalent 
 		return
 	},

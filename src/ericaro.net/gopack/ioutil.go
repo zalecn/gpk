@@ -14,9 +14,9 @@ import (
 
 // Some anti-pattern ioutils: so kept private to this package
 
-func FileExists(path string) bool{
+func FileExists(path string) bool {
 	_, err := os.Stat(path)
-	return ! os.IsNotExist(err)
+	return !os.IsNotExist(err)
 }
 
 func JsonReadFile(path string, v interface{}) (err error) {
@@ -90,7 +90,39 @@ func ScanDir(src string) (dir []string, err error) {
 			if err != nil {
 				return dir, err
 			}
-			dir =  append(dir, ndir...)
+			dir = append(dir, ndir...)
+		}
+	}
+	return
+}
+
+//ScanPackages scan for subdirectories containing .go files
+func ScanPackages(src string) (dir []string, err error) {
+	file, err := os.Open(src)
+	if err != nil {
+		return nil, err
+	}
+	appended := false // current src will be appended only if it contains at least one go file
+	subdir, err := file.Readdir(-1)
+	if err != nil {
+		return dir, err
+	}
+	dir = make([]string, 0)
+
+	for _, fi := range subdir {
+		if fi.IsDir() {
+			nsrc := filepath.Join(src, fi.Name())
+			ndir, err := ScanDir(nsrc)
+			if err != nil {
+				return dir, err
+			}
+			dir = append(dir, ndir...)
+		} else {
+			if !appended && strings.HasSuffix(fi.Name(), ".go") {
+				// there is a go file // append the parent's (only once)
+				dir = append(dir, src)
+				appended = true
+			}
 		}
 	}
 	return
