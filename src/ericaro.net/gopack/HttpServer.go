@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
+	"os"
 )
 
 //HttpServer serve a local repository as a remote
@@ -60,6 +62,27 @@ func (s *HttpServer) Serve(pid protocol.PID, w io.Writer) (err error) {
 	} else {
 		p.Pack(w)
 	}
+	return
+}
+
+func (s *HttpServer) Get(pid protocol.PID, goos, goarch, name string, w io.Writer) (err error) {
+	//func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
+	log.Printf("SERVING Exec %s %s %s %s %s", pid.Name, pid.Version.String(), goos, goarch, name)
+	id := *NewProjectID(pid.Name, pid.Version)
+	p, err := s.Local.FindPackage(id)
+	if err != nil {
+		return
+	}
+	dst := filepath.Join(p.InstallDir(), "bin", goos+"_"+goarch, name)
+	f, err := os.Open(dst)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	n, err := io.Copy(w, f)
+	log.Printf("Sent  %d b", n)
+	
+	
 	return
 }
 

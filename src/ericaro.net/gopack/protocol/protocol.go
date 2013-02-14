@@ -9,10 +9,13 @@ import (
 	"path"
 	"strconv"
 	"log"
+	"ericaro.net/gopack/semver"
+	
 )
 
 const ( // codes operations
 	FETCH  = "fetch"
+	GET  = "get"
 	PUSH   = "push"
 	PUSH_EXEC  = "pushx"
 	SEARCH = "search"
@@ -56,6 +59,10 @@ type Server interface {
 	//Serve is expected to find the package and write it down to the the writer interface.
 	// w must be a tar.gzed stream containing all the package structure, and a .gpk file
 	Serve(pid PID, w io.Writer) error
+	
+	//Get download for the given goos goarch, the given executable
+	Get(pid PID,goos, goarch, name string,  w io.Writer) error
+	
 	//Search actually perform the query and return a list of PID found
 	Search(query string, start int) ([]PID, error)
 	// The handlers make use of a debugf function.	
@@ -75,6 +82,9 @@ func HandleMux(p string, s Server, mux *http.ServeMux) {
 	})
 	mux.HandleFunc(path.Join(p, FETCH), func(w http.ResponseWriter, r *http.Request) {
 		serveFetch(s, w, r)
+	})
+	mux.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
+		serveGet(s, w, r)
 	})
 	mux.HandleFunc(path.Join(p, SEARCH), func(w http.ResponseWriter, r *http.Request) {
 		serveSearch(s, w, r)
@@ -147,6 +157,58 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = s.Serve(*pid, w)
+	if err != nil {
+		http.Error(w, err.Error(), ErrorCode(err))
+		log.Printf("%s Serve Error. %s", PUSH, err)
+	}
+	return
+}
+
+func pop(p string) (dir, base string){
+	dir, base = path.Dir(p), path.Base(p)
+	return
+}
+
+func serveGet(s Server, w http.ResponseWriter, r *http.Request) {
+	log.Printf("serve get")
+	var err error
+	p := r.URL.Path
+	
+	p, name := pop(p)
+	log.Printf("name=%s", name)
+	
+	p, goarch := pop(p)
+	log.Printf("goarch=%s", goarch)
+	
+	p, goos := pop(p)
+	log.Printf("goos=%s", goos)
+	
+	p, version := pop(p)
+	log.Printf("version=%s", version)
+	
+	p, pack := pop(p)
+	log.Printf("package=%s", pack)
+	
+	for p != "/get" {
+		var q string
+		p, q = pop(p)
+		pack=path.Join(q, pack)
+		log.Printf("package=%s", pack)
+	}
+	
+	pid := &PID{}
+	pid.Name = pack // todo validate the syntax
+	
+	pid.Version, err = semver.ParseVersion(version)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s invalid url. %s", GET, err)
+	}
+	if pid.Name == "" {
+		http.NotFound(w, r)
+		return
+	}
+	err = s.Get(*pid,goos, goarch,name,  w)
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
 		log.Printf("%s Serve Error. %s", PUSH, err)
