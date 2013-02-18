@@ -1,5 +1,5 @@
-gopack
-======
+# gopack
+
 
 <big>**Gopack** is a software dependency management tool for **Go**.
 
@@ -21,11 +21,11 @@ It can then deliver:
 
 </big>
 
+# Documentation
 
-Getting Started
-================
+[Read the Wiki](wiki)
 
-Version:   1.0.0.beta.5
+# Getting Started
 
 
 <small>
@@ -97,10 +97,8 @@ COMMANDS
 </pre>
  but prettier if you are using a vterm console
 
-Examples
-=========
 
-Hello World Project
+Hello World
 ---------------
 
 The purpose is to show the smallest possible Helloworld project.
@@ -132,4 +130,13 @@ $> ./bin/test
 </pre>
 
 
+# News
+
+2013-02: 
+
+1.0.0-beta.5
+   Add support for cross platform binaries, and test binaries compilation too
+   Add support for binaries upload/download from [gopack servers](wiki/Setting-a-gopack-LAN-server).
+
+2012-12: Project inception
 
