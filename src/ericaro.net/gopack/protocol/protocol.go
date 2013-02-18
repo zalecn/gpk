@@ -5,20 +5,19 @@ package protocol
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"path"
 	"strconv"
-	"log"
-	"ericaro.net/gopack/semver"
-	
 )
 
 const ( // codes operations
-	FETCH  = "fetch"
-	GET  = "get"
-	PUSH   = "push"
-	PUSH_EXEC  = "pushx"
-	SEARCH = "search"
+	FETCH     = "fetch"
+	GET       = "get"
+	LIST      = "list"
+	PUSH      = "push"
+	PUSH_EXEC = "pushx"
+	SEARCH    = "search"
 )
 
 //ProtocolError is an error, but adds an error code. This module provides several "standard" errors
@@ -31,7 +30,7 @@ type ProtocolError struct {
 func (p *ProtocolError) Error() string { return p.Message }
 
 //Standard errors
-var ( 
+var (
 	StatusForbidden         = &ProtocolError{"Forbidden Operation", http.StatusForbidden}
 	StatusIdentityMismatch  = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
 	StatusCannotOverwrite   = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
@@ -53,16 +52,17 @@ type Server interface {
 	// you can use the pid to perform some quick checks before reading the package in r
 	//r is a reader to a tar.gzed stream containing the package and the .gpk
 	Receive(pid PID, r io.ReadCloser) error
-	
+
 	ReceiveExecutables(pid PID, r io.ReadCloser) error
-	
+
 	//Serve is expected to find the package and write it down to the the writer interface.
 	// w must be a tar.gzed stream containing all the package structure, and a .gpk file
 	Serve(pid PID, w io.Writer) error
-	
+
 	//Get download for the given goos goarch, the given executable
-	Get(pid PID,goos, goarch, name string,  w io.Writer) error
-	
+	Get(pid PID, goos, goarch, name string, w io.Writer) error
+	List(pid PID, goos, goarch string, w io.Writer) ([]string, error)
+
 	//Search actually perform the query and return a list of PID found
 	Search(query string, start int) ([]PID, error)
 	// The handlers make use of a debugf function.	
@@ -83,8 +83,11 @@ func HandleMux(p string, s Server, mux *http.ServeMux) {
 	mux.HandleFunc(path.Join(p, FETCH), func(w http.ResponseWriter, r *http.Request) {
 		serveFetch(s, w, r)
 	})
-	mux.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(path.Join(p, GET), func(w http.ResponseWriter, r *http.Request) {
 		serveGet(s, w, r)
+	})
+	mux.HandleFunc(path.Join(p, LIST), func(w http.ResponseWriter, r *http.Request) {
+		serveList(s, w, r)
 	})
 	mux.HandleFunc(path.Join(p, SEARCH), func(w http.ResponseWriter, r *http.Request) {
 		serveSearch(s, w, r)
@@ -164,55 +167,56 @@ func serveFetch(s Server, w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func pop(p string) (dir, base string){
-	dir, base = path.Dir(p), path.Base(p)
-	return
-}
-
 func serveGet(s Server, w http.ResponseWriter, r *http.Request) {
-	log.Printf("serve get")
 	var err error
-	p := r.URL.Path
-	
-	p, name := pop(p)
-	log.Printf("name=%s", name)
-	
-	p, goarch := pop(p)
-	log.Printf("goarch=%s", goarch)
-	
-	p, goos := pop(p)
-	log.Printf("goos=%s", goos)
-	
-	p, version := pop(p)
-	log.Printf("version=%s", version)
-	
-	p, pack := pop(p)
-	log.Printf("package=%s", pack)
-	
-	for p != "/get" {
-		var q string
-		p, q = pop(p)
-		pack=path.Join(q, pack)
-		log.Printf("package=%s", pack)
-	}
-	
-	pid := &PID{}
-	pid.Name = pack // todo validate the syntax
-	
-	pid.Version, err = semver.ParseVersion(version)
+	vals := r.URL.Query()
+	pid, err := FromParameter(&vals) //n v t k x
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("%s invalid url. %s", GET, err)
+		log.Printf("%s invalid parameters. %s", GET, err)
 	}
 	if pid.Name == "" {
+		log.Printf("%s Serve Error. Empty package", GET)
 		http.NotFound(w, r)
 		return
 	}
-	err = s.Get(*pid,goos, goarch,name,  w)
+
+	name := vals.Get("exe")
+	goarch := vals.Get("goarch")
+	goos := vals.Get("goos")
+	//time to get the binary itself
+	err = s.Get(*pid, goos, goarch, name, w)
 	if err != nil {
 		http.Error(w, err.Error(), ErrorCode(err))
-		log.Printf("%s Serve Error. %s", PUSH, err)
+		log.Printf("%s Serve Error. %s", GET, err)
 	}
+	return
+}
+func serveList(s Server, w http.ResponseWriter, r *http.Request) {
+	var err error
+	vals := r.URL.Query()
+	pid, err := FromParameter(&vals) //n v t k x
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("%s invalid parameters. %s", LIST, err)
+	}
+	if pid.Name == "" {
+		log.Printf("%s Serve Error. Empty package", LIST)
+		http.NotFound(w, r)
+		return
+	}
+
+	goarch := vals.Get("goarch")
+	goos := vals.Get("goos")
+	//time to get the binaries itself
+	results, err := s.List(*pid, goos, goarch, w)
+	if err != nil {
+		log.Printf("%s Serve Error. %s", LIST, err)
+		http.Error(w, err.Error(), ErrorCode(err))
+	} else {
+		json.NewEncoder(w).Encode(results)
+	}
+
 	return
 }
 

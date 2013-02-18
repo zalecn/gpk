@@ -3,10 +3,11 @@ package gopack
 import (
 	"ericaro.net/gopack/protocol"
 	"io"
+	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"os"
+	"path/filepath"
 )
 
 //HttpServer serve a local repository as a remote
@@ -81,8 +82,31 @@ func (s *HttpServer) Get(pid protocol.PID, goos, goarch, name string, w io.Write
 	defer f.Close()
 	n, err := io.Copy(w, f)
 	log.Printf("Sent  %d b", n)
+	return
+}
+
+func (s *HttpServer) List(pid protocol.PID,  goos, goarch string, w io.Writer) (list []string, err error) {
+	//func (s *StandaloneBackendServer) Send(id gopack.ProjectID, w http.ResponseWriter, r *http.Request) {
+	log.Printf("LIST Exec %s %s %s %s", pid.Name, pid.Version.String(), goos, goarch)
+	id := *NewProjectID(pid.Name, pid.Version)
+	p, err := s.Local.FindPackage(id)
+	if err != nil {
+		return
+	}
 	
-	
+	dst := filepath.Join(p.InstallDir(), "bin", goos+"_"+goarch)
+	f, err := os.Open(dst)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	subdir, err := f.Readdir(-1)
+	list = make([]string, 0)
+	for _, fi:= range subdir {
+		if !fi.IsDir() {
+			list = append(list, fmt.Sprintf(`/get?n=%s&v=%s&goos=%s&goarch=%s&exe=%s`, pid.Name, pid.Version.String(), goos, goarch, fi.Name() ) )
+			}
+	}
 	return
 }
 

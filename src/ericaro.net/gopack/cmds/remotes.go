@@ -60,6 +60,20 @@ var Push = Command{
        REMOTE  a remote name in the remote list
        PACKAGE a package available in the local repository (use search to list them)
        VERSION a semantic version of the PACKAGE available in the local repository
+       
+       If binaries are pushed too, then they will be available at:
+       
+       <remote-url>/get?n=<package-name>&v=<package-version>&goos=<os>&goarch=<architecture>&exe=<executable-name>
+
+       Note, that the executable name is the full name, meaning with a trailing .exe if the goos=windows"
+       The list of available executable is also available at:
+       
+       <remote-url>/list?n=<package-name>&v=<package-version>&goos=<os>&goarch=<architecture>
+       
+       the server returns a list, in json format of download url.
+       
+       
+       
        `,
 	RequireProject: false,
 	FlagInit: func(Push *Command) {
@@ -111,9 +125,10 @@ var Push = Command{
 		err = remote.Push(pid, buf) // either exec or src
 		
 		if *pushExecutables {
-			log.Printf("pushing executables\n")
+			log.Printf("pushing executables")
 			buf := new(bytes.Buffer)
 			pkg.PackExecutables(buf) // pack both exec or src
+			
 			// and finally push the buffer
 			err = remote.PushExecutables(pid, buf) // either exec or src		
 		}
