@@ -1,31 +1,31 @@
-gopack
-======
+# gopack
+
 
 <big>**Gopack** is a software dependency management tool for **Go**.
 
-**Gopack** keeps packages **dependency** information to build the GOPATH variable, it also keeps **remote** locations where to publish and get packages.
+**Gopack** keeps package's **dependency** information to build the GOPATH variable. It also keeps **remote** locations where to publish and get packages.
 
 It can then deliver:
 
 * **Building** commands
-    * compile
-    * test
+    * compile. Single platform or cross compile
+    * test. Run them on the go or cross compile them for later tests.
 * **Managing** commands
     * list all dependencies (recursively)
     * find and list missing imports, and fix them
     * search for packages by name ( find the right version)
 * **Sharing** commands
     * download packages from remote locations
-    * publish packages to remote locations
+    * publish packages and binaries to remote locations
     * search packages or imports in remote locations
 
 </big>
 
+# Documentation
 
-Getting Started
-============
+[Read the Wiki](wiki)
 
-Version:   1.0.0.beta.3
+# Getting Started
 
 
 <small>
@@ -34,16 +34,18 @@ This section is still under development, it is kind of sparse (sorry)
 </small>
 
 
-installing it 
+installing it
+-----------------
 
-Linux
---------
+Very soon, gopack will be available for direct download in every supported platform. Meanwhile, you still need to build it.
+
+### Linux
+
 
 <pre> 
 git clone https://github.com/gopack/gpk.git
 cd gpk/
-export GOPATH=`pwd`
-go install ./src/...
+GOPATH=`pwd` go install ./src/...
 sudo cp ./bin/gpk /usr/bin/gpk
 </pre>
 
@@ -95,10 +97,8 @@ COMMANDS
 </pre>
  but prettier if you are using a vterm console
 
-Examples
-=========
 
-Hello World Project
+Hello World
 ---------------
 
 The purpose is to show the smallest possible Helloworld project.
@@ -130,112 +130,13 @@ $> ./bin/test
 </pre>
 
 
-Client/Server
--------------------
+# News
 
-Purpose: show how to start a basic gopack package server.
+2013-02: 
 
-On computer called 'server' lets start a server (it does not need to be on a specific directory)
-<pre>
-eric@server:$ gpk serve
-    starting server :8080
-</pre>
-It will by default expose the local repository
+1.0.0-beta.5
+   Add support for cross platform binaries, and test binaries compilation too
+   Add support for binaries upload/download from [gopack servers](wiki/Setting-a-gopack-LAN-server).
 
-On another computer called 'client' let's connect to this server
-<pre>eric@client:$ gpk r+ server http://192.168.0.30:8080
-    new remote: quere http://192.168.0.30:8080
-</pre>
-Lets search for stuff in it
-<pre>eric@client:$gpk search -r server ericaro.net</pre>
-the result list is empty
-
-Let's install the current project (gopack) as "0.0.0-master" in the local repository of "client", and push it to "server"
-I assume that I'm on a project called ericaro.net/gopack
-<pre>eric@client:$ gpk install master</pre>
-<pre>eric@server:$ gpk push server ericaro.net/gopack master
-Success
-</pre>
-Note that "master" is a valid name for the [semantic version](http://semver.org) 0.0.0-master.
-
-On the server side here is what has happened
-<pre>
-RECEIVING
-       ericaro.net/gopack master GNU Lesser GPL INTO /home/eric/.gpkrepository/ericaro.net/gopack/master</pre>
-</pre>
-
-Now, on the client side, if we search for package called ericaro.net we found one.
-
-<pre>eric@client:$ gpk s -r server ericaro.net</pre>
-
-
-<h2>Dependencies</h2>
- 
-
-Lets work on another project, and we added some imports in the code:
-<pre>import (
-    "ericaro.net/gopack/"
-    "ericaro.net/gopack/protocol"
-    "ericaro.net/gopack/semver"
-
-)</pre>
-
-is it one two or three packages or only one ?
-
-The project will not compile, right ?
-<pre>
-$ gpk c
-src/myproject/gae/services.go:6:2: import "ericaro.net/gopack": cannot find package
-src/myproject/gae/entities.go:8:2: import "ericaro.net/gopack/protocol": cannot find package
-src/myproject/gae/entities.go:9:2: import "ericaro.net/gopack/semver": cannot find package
-exit status 1
-</pre>
-<small>'gpk c' is short for 'gpk compile'</small>
-
-Let's fix the project
-
-<pre>$gpk lm -f
-Missing imports (3), missing packages (1)
-Missing packages ericaro.net/gopack                       -> ☑ ericaro.net/gopack 1.0.0-beta.1 
-                                                          -> ☐ ericaro.net/gopack master
-Project Updated
-</pre>
-<small>
-
-* 'gpk lm' is short for 'gpk list-missing'
-* -f stands for 'fix'
-
-</small>
-
-Now your project compiles, and the dependency is under control:
-<pre>$ gpk ld
-
-LIST OF DECLARED DEPENDENCIES:
-        google.com/appengine                     1.7.3
-        ericaro.net/gopack                       1.0.0-beta.1
-</pre>
-<small>'gpk ld' is short for 'gpk list-dependencies'
-</small>
-
-
-<pre>$ gpk lp -l
-
-LIST OF PACKAGES:
-        google.com/appengine                     1.7.3
-        code.google.com/p/goprotobuf/proto       default
-        ericaro.net/gopack                       1.0.0-beta.1
-
-</pre>
-<small>
-
-* 'gpk lp' is short for 'gpk list-package'
-* -l stands for 'list' by default 'gpk lp' prints the dependencies in a GOPATH way
-</small>
-
-**Tip** 
-
-Typing
-           <pre>alias GP='export GOPATH=`gpk lp`'</pre>
-In your shell is an easy way to to get an automatic GOPATH setter.
-
+2012-12: Project inception
 
