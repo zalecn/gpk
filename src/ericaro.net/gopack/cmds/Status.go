@@ -2,6 +2,7 @@ package cmds
 
 import (
 	. "ericaro.net/gopack"
+	"fmt"
 )
 
 func init() {
@@ -10,7 +11,7 @@ func init() {
 	)
 
 }
-
+var statusNameFlag *bool
 var Status = Command{
 	Name:           `status`,
 	Alias:          `?`,
@@ -19,8 +20,18 @@ var Status = Command{
 	Short:          `Print status`,
 	Long:           `Display current information about the current project and the current local repository`,
 	RequireProject: true,
+	FlagInit: func(Imports *Command) {
+		statusNameFlag = Imports.Flag.Bool("n", false, "name. Print only the name")
+		
+
+	},
 	Run: func(Status *Command)  (err error){
-		//ONce you pay for the scm relation print the branch, and print available versions)
+		
+		if *statusNameFlag{
+			fmt.Print(Status.Project.Name() )
+			return
+		}
+		
 		TitleStyle.Printf("    Name        : %s\n", Status.Project.Name())
 		SuccessStyle.Printf("    License     : %s\n", Status.Project.License().FullName)
 		dep := Status.Project.Dependencies()
