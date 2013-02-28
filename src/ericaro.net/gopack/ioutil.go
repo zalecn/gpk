@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"log"
 )
 
 // Some anti-pattern ioutils: so kept private to this package
@@ -98,6 +99,7 @@ func ScanDir(src string) (dir []string, err error) {
 
 //ScanPackages scan for subdirectories containing .go files
 func ScanPackages(src string) (dir []string, err error) {
+	log.Printf("scanning for Package in %s", src)
 	file, err := os.Open(src)
 	if err != nil {
 		return nil, err
@@ -112,7 +114,7 @@ func ScanPackages(src string) (dir []string, err error) {
 	for _, fi := range subdir {
 		if fi.IsDir() {
 			nsrc := filepath.Join(src, fi.Name())
-			ndir, err := ScanDir(nsrc)
+			ndir, err := ScanPackages(nsrc)
 			if err != nil {
 				return dir, err
 			}
@@ -120,6 +122,7 @@ func ScanPackages(src string) (dir []string, err error) {
 		} else {
 			if !appended && strings.HasSuffix(fi.Name(), ".go") {
 				// there is a go file // append the parent's (only once)
+				log.Printf("Current package %s has a .go file (%s) ", src, fi.Name() )
 				dir = append(dir, src)
 				appended = true
 			}

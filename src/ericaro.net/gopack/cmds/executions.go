@@ -69,7 +69,9 @@ var Compile = Command{
 				goarch = os.Getenv("GOARCH")
 			}
 
+			log.Printf("Parsing packages to test-compile\n")
 			packages := Compile.Project.Packages() // list all packages
+			
 			root := Compile.Project.WorkingDir()
 			for _, p := range packages {
 				log.Printf("compiling %s tests\n", p)
