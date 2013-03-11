@@ -23,7 +23,7 @@ It can then deliver:
 
 # Documentation
 
-[Read the Wiki](wiki)
+[Read the Wiki](http://github.com/gopack/gpk/wiki)
 
 # Getting Started
 
