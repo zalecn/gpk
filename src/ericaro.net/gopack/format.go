@@ -3,6 +3,7 @@ package gopack
 import (
 	"fmt"
 )
+
 // use some escape character for vterm to pretty print text in a console
 const (
 	TERM_RESET     = 0
@@ -27,11 +28,10 @@ const (
 
 //Defines some styles used in the command.
 var (
-	TitleStyle = PFormat{TERM_BRIGHT, COLOR_DEFAULT, COLOR_DEFAULT}
-	ErrorStyle = PFormat{TERM_NULL, COLOR_RED, COLOR_DEFAULT}
+	TitleStyle   = PFormat{TERM_BRIGHT, COLOR_DEFAULT, COLOR_DEFAULT}
+	ErrorStyle   = PFormat{TERM_NULL, COLOR_RED, COLOR_DEFAULT}
 	SuccessStyle = PFormat{TERM_NULL, COLOR_GREEN, COLOR_DEFAULT}
-	NormalStyle = PFormat{TERM_NULL, COLOR_DEFAULT, COLOR_DEFAULT}
-	
+	NormalStyle  = PFormat{TERM_NULL, COLOR_DEFAULT, COLOR_DEFAULT}
 )
 
 type PFormat struct {
@@ -39,15 +39,21 @@ type PFormat struct {
 }
 
 func (f *PFormat) Printf(message string, v ...interface{}) {
-	fmt.Print( f.Sprintf(message, v...) )
+	fmt.Print(f.Sprintf(message, v...))
 }
 
 func (f *PFormat) Clear() {
-	fmt.Printf("%c[1;1H%c[2J", 0x1B, 0x1B )
+	fmt.Printf("\033[1;1H\033[2J")
 }
 
-func (f *PFormat) Sprintf(message string, v ...interface{}) string{
-	return fmt.Sprintf("%c[%d;%d;%dm%s%c[%dm", 0x1B, f.Attr, f.Foreground+30, f.Background+40, fmt.Sprintf(message, v...), 0x1B, 0)
+func (f *PFormat) Sprintf(message string, v ...interface{}) string {
+	if f.Background == COLOR_DEFAULT {
+	// apparently some vterm color processor do not handle the three parameters, so I avoid them if I can.
+		return fmt.Sprintf("\033[%d;%dm%s\033[0m", f.Attr, f.Foreground+30, fmt.Sprintf(message, v...))
+	} else { 
+		return fmt.Sprintf("\033[%d;%d;%dm%s\033[0m", f.Attr, f.Foreground+30, f.Background+40, fmt.Sprintf(message, v...))
+	}
+	panic("unreachable code")
 }
 
 func (f *PFormat) PrintTriple(small, medium, large string) {

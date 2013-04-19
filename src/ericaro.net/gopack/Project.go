@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
+	//"strings"
 )
 
 const (
@@ -172,7 +172,7 @@ func scanProjectSrc(dst, src string, dirHandler, srcHandler func(dst, src string
 			if err != nil {
 				return err
 			}
-		case strings.HasSuffix(fi.Name(), ".go"):
+		default: //case strings.HasSuffix(fi.Name(), ".go"):
 			ndst, nsrc := filepath.Join(dst, fi.Name()), filepath.Join(src, fi.Name())
 			err := srcHandler(ndst, nsrc)
 			if err != nil {
@@ -294,7 +294,7 @@ func (p *Project) Packages() []string {
 		p, err := filepath.Rel(srcDir, d)
 		packages[i] = p
 		if err != nil {
-			panic(err)//really unexpected
+			panic(err) //really unexpected
 		}
 	}
 	return packages
