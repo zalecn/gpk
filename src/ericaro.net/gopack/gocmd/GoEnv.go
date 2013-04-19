@@ -3,10 +3,10 @@ package gocmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
-	"io/ioutil"
 )
 
 // reflect some basic go operations
@@ -60,14 +60,16 @@ func Join(path string, elements ...string) string {
 
 //Install wrap the go install command. 
 // For the moment only -a option is available
-func (g *GoEnv) Install(root string, all bool) (err error){
+func (g *GoEnv) Install(root string, all bool, ldflags string) (err error) {
 	var cmd *exec.Cmd
-	if all{
-	cmd = exec.Command("go", "install", "-a",  "./src/...")
+	//ldflags = "'" + ldflags + "'"
+	if all {
+		cmd = exec.Command("go", "install", "-a", "-ldflags", ldflags, "./src/...")
 	} else {
-		cmd = exec.Command("go", "install",  "./src/...")
+		//fmt.Printf("ldflags=%s", ldflags)
+		cmd = exec.Command("go", "install", "-ldflags", ldflags, "./src/...")
 	}
-	
+
 	// extend the current env with my GOPATH variable
 	locals := map[string]string{
 		"GOPATH": Join(root, g.gopath),
@@ -84,9 +86,9 @@ func (g *GoEnv) Install(root string, all bool) (err error){
 
 //InstallTest wrap the go test -c command to compile test exe for a given package 
 // For the moment only -a option is available
-func (g *GoEnv) InstallTest(root, pack string) (err error){
+func (g *GoEnv) InstallTest(root, pack string) (err error) {
 	var cmd *exec.Cmd
-	cmd = exec.Command("go", "test", "-c",  pack)
+	cmd = exec.Command("go", "test", "-c", pack)
 	// extend the current env with my GOPATH variable
 	locals := map[string]string{
 		"GOPATH": Join(root, g.gopath),
@@ -94,7 +96,7 @@ func (g *GoEnv) InstallTest(root, pack string) (err error){
 
 	cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout =  ioutil.Discard//Stdout
+	cmd.Stdout = ioutil.Discard //Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = root // asbolute path of the project
 	err = cmd.Run()
@@ -103,19 +105,20 @@ func (g *GoEnv) InstallTest(root, pack string) (err error){
 	}
 	return
 }
+
 // Wrapper around go test command
-func (g *GoEnv) Test(root, wd string, args []string) (err error){
-	
+func (g *GoEnv) Test(root, wd string, args []string) (err error) {
+
 	arguments := make([]string, 0, len(args)+2)
 	arguments = append(arguments, "test")
 	arguments = append(arguments, args...)
-	 
-	cmd := exec.Command("go",  arguments...)//"./src/...")
+
+	cmd := exec.Command("go", arguments...) //"./src/...")
 
 	locals := map[string]string{
 		"GOPATH": Join(g.gopath, root),
 	}
-	
+
 	cmd.Env = BuildEnv(locals)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

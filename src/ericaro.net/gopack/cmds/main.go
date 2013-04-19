@@ -3,30 +3,35 @@ package cmds
 
 import (
 	. "ericaro.net/gopack"
+	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math"
+	"os"
 	"os/user"
 	"path/filepath"
 	"sort"
-	"os"
-	"errors"
-	"log"
-	"io/ioutil"
 )
+
+var GopackageVersion string
+
+func init() {
+	if GopackageVersion == "" {
+		GopackageVersion = "master"
+	}
+}
 
 const (
 	Cmd               = "gpk"
-	GopackageVersion  = "master" //? I really would like this content to be handled by gpk itself ...
 	DefaultRepository = ".gpkrepository"
-	
 
-	RemoteCategory = -iota
+	RemoteCategory     = -iota
 	DependencyCategory = -iota
-	CompileCategory = -iota
-	InitCategory = -iota
-	HelpCategory = -iota
-	
+	CompileCategory    = -iota
+	InitCategory       = -iota
+	HelpCategory       = -iota
 )
 
 // here are gopackage flags not specific ones
@@ -52,8 +57,6 @@ func (s commands) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-
-
 //Reg is to register a command (or a bunch of them) to be available in the main
 func Reg(commands ...*Command) {
 	for _, c := range commands { // we append the command in the double map (name, and alias)
@@ -65,7 +68,6 @@ func Reg(commands ...*Command) {
 	}
 	AllCommands = append(AllCommands, commands...)
 }
-
 
 func InvalidArgumentSize() error {
 	return errors.New("Invalid Argument Size")
@@ -93,7 +95,7 @@ func PrintGlobalUsage() {
 		}
 		NormalStyle.PrintTriple(c.Alias, c.Name, c.Short)
 	}
-	
+
 	SuccessStyle.Printf("\n\n       Type 'gpk help [COMMAND]' for more details about a command.")
 	fmt.Println("\n")
 }
@@ -102,17 +104,15 @@ func PrintGlobalUsage() {
 // It is fairly generic wrt to Commands, it first parses the general commands, then the command
 func Gopack() {
 
-
 	flag.Parse() // Scan the main arguments list
 	if *versionFlag {
 		fmt.Println("Version:", GopackageVersion)
 		return
 	}
-	if ! *verboseFlag {
+	if !*verboseFlag {
 		log.SetOutput(ioutil.Discard)
 	}
-	
-	
+
 	sort.Sort(AllCommands)
 	if len(flag.Args()) == 0 {
 		PrintGlobalUsage()
@@ -142,7 +142,7 @@ func Gopack() {
 		}
 		cmd.Project = p
 	}
-	cmd.Flag.Usage = func(){PrintCommandHelp(cmd) }
+	cmd.Flag.Usage = func() { PrintCommandHelp(cmd) }
 	// now continue parsing the command's args, using the command flags
 	err = cmd.Flag.Parse(flag.Args()[1:])
 	if err != nil {
@@ -151,7 +151,7 @@ func Gopack() {
 	}
 	err = cmd.Run(cmd) // really execute the command
 	if err != nil {
-		os.Exit( -1 )
+		os.Exit(-1)
 	}
 }
 
@@ -161,7 +161,7 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 	if !filepath.IsAbs(path) {
 		u, err := user.Current()
 		if err != nil {
-		return nil, err
+			return nil, err
 		}
 		path = filepath.Join(u.HomeDir, *localRepositoryFlag)
 		path = filepath.Clean(path)
@@ -174,7 +174,7 @@ func NewDefaultRepository() (r *LocalRepository, err error) {
 type Command struct {
 	Category                            int8
 	Run                                 func(c *Command) error // the callable to run
-	FlagInit                            func(c *Command) // the callable to init flags
+	FlagInit                            func(c *Command)       // the callable to init flags
 	Name, Alias, UsageLine, Short, Long string
 	Flag                                flag.FlagSet // the command options to be parsed
 	RequireProject                      bool

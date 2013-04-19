@@ -6,11 +6,11 @@ import (
 	. "ericaro.net/gopack"
 	"ericaro.net/gopack/gocmd"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
-	"log"
 )
 
 func init() {
@@ -27,6 +27,7 @@ var compileAllFlag *bool
 var compileOfflineFlag *bool
 var compileUpdateFlag *bool
 var compileSkipTestFlag *bool
+var compileLDFlag *string
 var Compile = Command{
 	Name:      `compile`,
 	Alias:     `c`,
@@ -40,7 +41,7 @@ var Compile = Command{
 		compileAllFlag = Compile.Flag.Bool("a", false, "all. Force rebuilding of packages that are already up-to-date.")
 		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
 		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
-
+		compileLDFlag = Compile.Flag.String("ldflags", "", "pass ldflags to all sub commands")
 		compileSkipTestFlag = Compile.Flag.Bool("s", false, "skip. Skip Test compilation")
 	},
 	Run: func(Compile *Command) (err error) {
@@ -54,7 +55,7 @@ var Compile = Command{
 		gopath, err := Compile.Repository.GoPath(dependencies)
 
 		goEnv := gocmd.NewGoEnv(gopath)
-		err = goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag)
+		err = goEnv.Install(Compile.Project.WorkingDir(), *compileAllFlag, *compileLDFlag)
 
 		if !*compileSkipTestFlag {
 
@@ -63,7 +64,7 @@ var Compile = Command{
 			if os.Getenv("GOOS") != "" {
 				goos = os.Getenv("GOOS")
 			}
-			
+
 			goarch := runtime.GOARCH //default value
 			if os.Getenv("GOARCH") != "" {
 				goarch = os.Getenv("GOARCH")
@@ -71,7 +72,7 @@ var Compile = Command{
 
 			log.Printf("Parsing packages to test-compile\n")
 			packages := Compile.Project.Packages() // list all packages
-			
+
 			root := Compile.Project.WorkingDir()
 			for _, p := range packages {
 				log.Printf("compiling %s tests\n", p)
@@ -88,7 +89,7 @@ var Compile = Command{
 				dst := filepath.Join(root, "bin", goos+"_"+goarch, name)
 				src := filepath.Join(root, name)
 				if FileExists(src) {
-					os.MkdirAll(filepath.Dir(dst) , os.ModeDir|os.ModePerm)
+					os.MkdirAll(filepath.Dir(dst), os.ModeDir|os.ModePerm)
 					err = os.Rename(src, dst)
 					//_, err = CopyFile(dst, src)
 					if err != nil {
