@@ -12,7 +12,8 @@ PKG           := $(shell gpk ? -n)
 
 all: compile
 
-compile:;	go install -ldflags '-X ericaro.net/gopack/cmds.GopackageVersion $(VERSION)' ./src/...
+compile:;	
+	GOPATH=`pwd` go install -ldflags '-X ericaro.net/gopack/cmds.GopackageVersion $(VERSION)' ./src/...
 
 install: compile
 	sudo cp ./bin/gpk /usr/bin/gpk

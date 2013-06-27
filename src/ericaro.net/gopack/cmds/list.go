@@ -31,7 +31,7 @@ var Imports = Command{
 		importsAutofixFlag = Imports.Flag.Bool("f", false, "fix auto. Auto fix the current project using default choices")
 
 	},
-	Run: func(Imports *Command)  (err error){
+	Run: func(Imports *Command) (err error) {
 		toSave := false
 		missing := Imports.Repository.MissingImports(Imports.Project, *importsOfflineFlag)
 		missingPack := Imports.Repository.MissingPackages(missing)
@@ -69,7 +69,7 @@ var ListDependencies = Command{
 	RequireProject: true,
 	FlagInit: func(ListDependencies *Command) {
 	},
-	Run: func(ListDependencies *Command)  (err error){
+	Run: func(ListDependencies *Command) (err error) {
 		TitleStyle.Printf("\nLIST OF DECLARED DEPENDENCIES:\n")
 		// TODO print in a suitable way for copy pasting
 		dependencies := ListDependencies.Project.Dependencies()
@@ -89,7 +89,7 @@ var ListRemotes = Command{
 	Short:          `List Remotes.`,
 	Long:           `List declared remotes.`,
 	RequireProject: false,
-	Run: func(ListRemotes *Command)  (err error){
+	Run: func(ListRemotes *Command) (err error) {
 		TitleStyle.Printf("\nLIST OF REMOTES:\n")
 		rem := ListRemotes.Repository.Remotes()
 		if len(rem) == 0 {
@@ -111,6 +111,8 @@ var ListRemotes = Command{
 }
 
 var pathListFlag *bool
+var pathOfflineFlag *bool
+var pathUpdateFlag *bool
 var Path = Command{
 	Name:      `list-package`,
 	Alias:     `lp`,
@@ -123,11 +125,14 @@ var Path = Command{
 	RequireProject: true,
 	FlagInit: func(Path *Command) {
 		pathListFlag = Path.Flag.Bool("l", false, "list. Pretty Print the list.")
+		pathOfflineFlag = Path.Flag.Bool("o", false, "offline. Do not look outside for missing dependencies")
+		pathUpdateFlag = Path.Flag.Bool("u", false, "update. Look for updated version of dependencies")
 	},
-	Run: func(Path *Command)  (err error){
+	Run: func(Path *Command) (err error) {
 
 		// parse dependencies, and build the gopath
-		dependencies, err := Path.Repository.ResolveDependencies(Path.Project, true, false) // path does not update the dependencies
+		//dependencies, err := Compile.Repository.ResolveDependencies(Compile.Project, *compileOfflineFlag, *compileUpdateFlag)
+		dependencies, err := Path.Repository.ResolveDependencies(Path.Project, *pathOfflineFlag, *pathUpdateFlag) // path does not update the dependencies
 		if err != nil {
 			ErrorStyle.Printf("Error Resolving project's dependencies:\n    \u21b3 %v", err)
 			return
@@ -140,7 +145,7 @@ var Path = Command{
 				for _, d := range dependencies {
 					SuccessStyle.Printf("        %-40s %s\n", d.Name(), d.Version().String())
 				}
-			}else {
+			} else {
 				SuccessStyle.Printf("       <empty>\n")
 			}
 			fmt.Println()
