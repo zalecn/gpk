@@ -39,8 +39,8 @@ var Compile = Command{
 	RequireProject: true,
 	FlagInit: func(Compile *Command) {
 		compileAllFlag = Compile.Flag.Bool("a", false, "all. Force rebuilding of packages that are already up-to-date.")
-		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Try to find missing dependencies at http://gpk.ericaro.net")
-		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies")
+		compileOfflineFlag = Compile.Flag.Bool("o", false, "offline. Do not use the network to look for missing dependencies.")
+		compileUpdateFlag = Compile.Flag.Bool("u", false, "update. Look for updated version of dependencies.")
 		compileLDFlag = Compile.Flag.String("ldflags", "", "pass ldflags to all sub commands")
 		compileSkipTestFlag = Compile.Flag.Bool("s", false, "skip. Skip Test compilation")
 	},
