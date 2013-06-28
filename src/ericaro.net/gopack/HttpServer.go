@@ -2,7 +2,6 @@ package gopack
 
 import (
 	"ericaro.net/gopack/protocol"
-	"errors"
 	"fmt"
 	"io"
 	"log"
