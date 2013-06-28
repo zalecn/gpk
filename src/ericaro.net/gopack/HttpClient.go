@@ -6,7 +6,6 @@ import (
 	"ericaro.net/gopack/protocol"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -37,7 +36,6 @@ func (c *HttpClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 		RawQuery: v.Encode(),
 	}
 	remote := c.Path()
-	log.Printf("Fetch %s", u)
 	resp, err := http.Get(remote.ResolveReference(u).String())
 	if err != nil {
 		return

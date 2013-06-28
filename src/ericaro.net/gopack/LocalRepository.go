@@ -234,12 +234,9 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 							return
 						})
 						// prjnew contains a newer version (downloaded though)
-						if err != nil {
-							log.Printf("Failed to download new Version for %s", d)
-							return err // failed to download
+						if err == nil { //succeeded in updating 
+							prj = prjnew
 						}
-
-						prj = prjnew
 					}
 				}
 			}
