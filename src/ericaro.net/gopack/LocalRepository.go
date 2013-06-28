@@ -40,14 +40,12 @@ func NewLocalRepository(root string) (r *LocalRepository, err error) {
 	if err != nil {
 		return
 	}
-	
-	
+
 	_, err = os.Stat(root)
-	if os.IsNotExist(err) { 
+	if os.IsNotExist(err) {
 		os.MkdirAll(root, os.ModeDir|os.ModePerm) // mkdir -p
 		err = nil
 	}
-	
 
 	dst := filepath.Join(root, GpkrepositoryFile)
 	r = &LocalRepository{
@@ -75,9 +73,9 @@ func (r *LocalRepository) Remote(name string) (remote protocol.Client, err error
 
 //RemoteAdd append a remote to the list, refuse to append if there is a remote with that name already
 func (p *LocalRepository) RemoteAdd(remote protocol.Client) (err error) {
-	for _, r := range p.remotes[:]  { // operate on a copy of the remotes
+	for _, r := range p.remotes[:] { // operate on a copy of the remotes
 		if strings.EqualFold(remote.Name(), r.Name()) {
-			p.RemoteRemove(remote.Name() )
+			p.RemoteRemove(remote.Name())
 			u := r.Path()
 			SuccessStyle.Printf("       -%s %s\n", remote.Name(), u.String())
 			//return errors.New(fmt.Sprintf("A Remote called %s already exists", remote.Name()))
@@ -212,7 +210,7 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 				if err != nil { // missing dependency in local repo, search remote
 					log.Printf("Trying to download %s from remotes", d)
 					prj, err = remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-						rprj, err := r.downloadPackage(remote, d)
+						rprj, err := r.downloadPackage(remote, d, nil)
 						if err != nil {
 							fail <- err
 						} else {
@@ -226,7 +224,8 @@ func (r *LocalRepository) findProjectDependencies(p *Project, remotes []protocol
 						// try to get a newer version into prjnew
 						log.Printf("Trying to download a newer version for %s", d)
 						prjnew, err := remoteHandler(remotes, func(remote protocol.Client, suc chan *Package, fail chan error) (p *Package, err error) {
-							rprj, err := r.downloadPackage(remote, d) // always try to download updates, if there is no update it fails fast
+							t := prj.Timestamp()
+							rprj, err := r.downloadPackage(remote, d, &t) // always try to download updates, if there is no update it fails fast
 							if err != nil {
 								fail <- err
 							} else {
@@ -281,15 +280,17 @@ func remoteHandler(remotes []protocol.Client, handler func(r protocol.Client, su
 }
 
 //downloadPackage fetch the package, and install it in the local repository
-func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID) (prj *Package, err error) {
+func (r *LocalRepository) downloadPackage(remote protocol.Client, p ProjectID, timestamp *time.Time) (prj *Package, err error) {
 	log.Printf("Downloading %s from %s", p, remote.Name())
 	reader, err := remote.Fetch(protocol.PID{
-		Name:    p.Name(),
-		Version: p.Version(),
+		Name:      p.Name(),
+		Version:   p.Version(),
+		Timestamp: timestamp,
 	})
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Installing %s from %s ", p, remote.Name())
 	prj, err = r.Install(reader)
 	return
 }
@@ -319,7 +320,7 @@ func (r *LocalRepository) install(clean bool, reader io.Reader) (prj *Package, e
 	}
 	dst := filepath.Join(r.root, prj.self.name, prj.version.String())
 	_, err = os.Stat(dst)
-	if clean && !os.IsNotExist(err) { 
+	if clean && !os.IsNotExist(err) {
 		os.RemoveAll(dst)
 	}
 	err = os.MkdirAll(dst, os.ModeDir|os.ModePerm) // mkdir -p

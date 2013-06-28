@@ -35,6 +35,7 @@ var (
 	StatusIdentityMismatch  = &ProtocolError{"Mismatch between Identity Declared and Received", http.StatusExpectationFailed}
 	StatusCannotOverwrite   = &ProtocolError{"Cannot Overwrite a Package", http.StatusConflict}
 	StatusMissingDependency = &ProtocolError{"Missing Dependency", http.StatusNotAcceptable}
+	StatusNotNewPackage     = &ProtocolError{"No Newer Package", http.StatusNotModified}
 )
 
 // convert any error into a suitable error code. it uses http.StatusInternalServerError if this is not a protocol error

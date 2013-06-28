@@ -6,6 +6,7 @@ import (
 	"ericaro.net/gopack/protocol"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,6 +37,7 @@ func (c *HttpClient) Fetch(pid protocol.PID) (r io.ReadCloser, err error) {
 		RawQuery: v.Encode(),
 	}
 	remote := c.Path()
+	log.Printf("Fetch %s", u)
 	resp, err := http.Get(remote.ResolveReference(u).String())
 	if err != nil {
 		return
@@ -92,7 +94,7 @@ func (c *HttpClient) PushExecutables(pid protocol.PID, r io.Reader) (err error) 
 	if err != nil {
 		return
 	}
-	req.ContentLength = int64(buf.Len()) 
+	req.ContentLength = int64(buf.Len())
 	resp, err := client.Do(req)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return errors.New(resp.Status)
